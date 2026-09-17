@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {localDateTime} from '../../shared/date-time';
+import {validateDiscount,cartPrice} from '../../shared/logic';
+import {initialData} from '../../src/seed';
+import type {Discount} from '../../shared/domain';
+const d:Discount={id:'test',code:'SAVE',kind:'percentage',value:10,active:true,startsAt:null,endsAt:null,used:0,usageLimit:1,minimumSubtotal:0,productIds:[],collectionIds:[]};
+test('promotion editor preserves local wall time when reopening UTC timestamps',()=>{const previous=process.env.TZ;try{process.env.TZ='Asia/Jerusalem';const iso='2026-01-10T10:15:00.000Z';const local=localDateTime(iso);assert.equal(local,'2026-01-10T12:15');assert.equal(new Date(local).toISOString(),iso)}finally{if(previous===undefined)delete process.env.TZ;else process.env.TZ=previous}});
+test('invalid promotion timestamps, blank codes and noninteger monetary limits fail closed',()=>{for(const change of [{startsAt:'invalid'},{endsAt:'invalid'},{code:' '},{minimumSubtotal:0.5},{used:-1}])assert.throws(()=>validateDiscount({...d,...change}))});
+test('promotion schedule, minimum, collection eligibility and activation are enforced',()=>{const p=initialData(true).products.find(p=>p.isDemo)!;const lines=[{productId:p.id,variantId:p.variants[0].id,quantity:1}];for(const change of [{active:false},{startsAt:'2099-01-01T00:00:00Z'},{minimumSubtotal:999999},{collectionIds:['missing']}])assert.throws(()=>cartPrice(lines,[p],0,{...d,...change}));const product={...p,collectionIds:['eligible']};assert.ok(cartPrice(lines,[product],3500,{...d,collectionIds:['eligible']}).discount>0)});

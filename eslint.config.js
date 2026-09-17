@@ -1,0 +1,3 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+export default tseslint.config({ignores:['dist/**','node_modules/**','test-results/**','playwright-report/**','supabase/functions/**']},js.configs.recommended,...tseslint.configs.recommended,{files:['**/*.{ts,tsx,js}'],languageOptions:{globals:{console:'readonly',process:'readonly',document:'readonly',window:'readonly',fetch:'readonly',URL:'readonly',crypto:'readonly',setTimeout:'readonly',Request:'readonly',Response:'readonly',File:'readonly',FormData:'readonly',localStorage:'readonly',sessionStorage:'readonly',navigator:'readonly'}},rules:{'@typescript-eslint/no-explicit-any':'error','@typescript-eslint/no-unused-vars':['error',{argsIgnorePattern:'^_'}]}});

@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {hashValue,matchesMagic} from '../../shared/security.ts';
+const bytes=(s:string)=>new TextEncoder().encode(s);
+test('request hashes preserve letter case',async()=>assert.notEqual(await hashValue('Name','x'.repeat(32)),await hashValue('name','x'.repeat(32))));
+test('rate-limit hashes preserve action scope',async()=>assert.notEqual(await hashValue('catalog:127.0.0.1','x'.repeat(32)),await hashValue('checkout:127.0.0.1','x'.repeat(32))));
+test('raw hashing rejects short secrets',async()=>assert.rejects(hashValue('payload','short')));
+test('JPEG magic accepted',()=>assert.equal(matchesMagic(new Uint8Array([255,216,255,224]),'image/jpeg'),true));
+test('HTML masquerading as JPEG rejected',()=>assert.equal(matchesMagic(bytes('<html>'),'image/jpeg'),false));
+test('WebP requires RIFF and WEBP signatures',()=>{assert.equal(matchesMagic(bytes('RIFF0000WEBP'),'image/webp'),true);assert.equal(matchesMagic(bytes('RIFF0000WAVE'),'image/webp'),false)});
+test('PDF magic accepted only for PDF MIME',()=>{assert.equal(matchesMagic(bytes('%PDF-1.7'),'application/pdf'),true);assert.equal(matchesMagic(bytes('%PDF-1.7'),'image/png'),false)});
+test('AVIF brand checked',()=>assert.equal(matchesMagic(bytes('0000ftypavif'),'image/avif'),true));
+test('MP4 brand checked',()=>assert.equal(matchesMagic(bytes('0000ftypisom'),'video/mp4'),true));
+test('unknown MIME denied',()=>assert.equal(matchesMagic(bytes('<svg>'),'image/svg+xml'),false));

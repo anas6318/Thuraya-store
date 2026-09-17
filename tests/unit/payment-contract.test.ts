@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {verifyPaymentCallback,type PaymentAdapter, type VerifiedPaymentEvent} from '../../shared/payments.ts';
+const event:VerifiedPaymentEvent={provider:'card',eventId:'event-1',orderId:'order-1',amount:100,currency:'ILS',outcome:'paid'};
+const adapter:PaymentAdapter={method:'card',configured:()=>true,verifyCallback:async()=>event};
+test('unimplemented and unconfigured payment adapters reject callbacks',async()=>{await assert.rejects(verifyPaymentCallback(undefined,new Uint8Array([1]),new Headers()));await assert.rejects(verifyPaymentCallback({...adapter,configured:()=>false},new Uint8Array([1]),new Headers()))});
+test('signature rejection cannot reach normalized processing',async()=>{await assert.rejects(verifyPaymentCallback({...adapter,verifyCallback:async()=>{throw Error('invalid signature')}},new Uint8Array([1]),new Headers()))});
+test('callback boundary validates provider, currency and integer amount',async()=>{for(const patch of [{provider:'paypal'},{currency:'USD'},{amount:1.2},{amount:-1}])await assert.rejects(verifyPaymentCallback({...adapter,verifyCallback:async()=>({...event,...patch}) as VerifiedPaymentEvent},new Uint8Array([1]),new Headers()))});
+test('callback byte limits are enforced before signature processing',async()=>{for(const bytes of [new Uint8Array(),new Uint8Array(262145)])await assert.rejects(verifyPaymentCallback(adapter,bytes,new Headers()))});
+test('verified callback preserves raw bytes and headers for adapter verification',async()=>{const bytes=new Uint8Array([0,255,42]);const headers=new Headers({'x-signature':'test'});const result=await verifyPaymentCallback({...adapter,verifyCallback:async(raw,h)=>{assert.equal(raw,bytes);assert.equal(h,headers);return event}},bytes,headers);assert.deepEqual(result,event)});

@@ -1,0 +1,8 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {initialData} from '../../src/seed.ts';
+import {mediaIsReferenced,mediaReferences} from '../../shared/media-references.ts';
+test('disabled CMS sections still protect media from deletion',()=>{const d=initialData();const m={...d.media[0],id:'upload',src:'/unique.jpg'};d.sections[0].image=m.src;d.sections[0].enabled=false;assert.equal(mediaIsReferenced(d,m),true)});
+test('taxonomy signed references protect uploaded media',()=>{const d=initialData();const m={...d.media[0],id:'upload',src:'/unique.jpg',storagePath:'owner/image.jpg'};d.collections[0].image='https://storage.example/object/sign/product-media/owner/image.jpg?token=expired';assert.equal(mediaIsReferenced(d,m),true)});
+test('unreferenced media may be removed',()=>{const d=initialData();assert.equal(mediaIsReferenced(d,{...d.media[0],id:'unused',src:'/unused.jpg'}),false)});
+test('reference projection lists product, variant and CMS relationships without source URLs',()=>{const d=initialData();const product=d.products[0];const media={...d.media[0],id:'linked',src:'/linked.jpg'};product.media=[media];product.variants=[{id:'variant-linked',sku:'LINKED',options:{},adjustment:0,active:true,stock:null,gem:{},metal:{},measurements:{},mediaIds:[media.id]}];d.sections[0].image=media.src;d.categories[0].image=media.src;d.collections[0].image=media.src;const refs=mediaReferences(d,media);assert.deepEqual(refs.map(ref=>ref.kind),['product','variant','homepage_section','category','collection']);assert.equal(refs.some(ref=>ref.label.includes('/linked.jpg')),false)});

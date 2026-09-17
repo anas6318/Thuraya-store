@@ -1,0 +1,27 @@
+project_id = "thuraya-store"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+[db]
+port = 54322
+major_version = 15
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/en/account", "http://localhost:5173/ar/account", "http://localhost:5173/he/account"]
+[functions.store-api]
+verify_jwt = false
+[functions.notification-worker]
+verify_jwt = false
+[functions.payment-webhook]
+verify_jwt = false
+[functions.media-delivery]
+verify_jwt = false
+[functions.media-cleanup]
+verify_jwt = false
+[functions.notification-receipt]
+# Application authenticates every event with the provider's raw-body signature.
+verify_jwt = false

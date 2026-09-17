@@ -1,0 +1,13 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {productSchema} from '../../shared/product-schema.ts';
+import {initialData} from '../../src/seed.ts';
+const fixture=()=>structuredClone(initialData(true).products.find(p=>p.isDemo)!);
+test('configured drafts and demo fixtures satisfy the product contract',()=>{for(const p of initialData(true).products)assert.equal(productSchema.safeParse(p).success,true,p.slug)});
+test('private fields cannot be smuggled into public gem specifications',()=>{const p=fixture();Object.assign(p.gem,{supplierCost:500});assert.equal(productSchema.safeParse(p).success,false)});
+test('negative and nonfinite measurements are rejected',()=>{for(const n of [-1,Infinity,NaN]){const p=fixture();p.measurements.widthMm=n;assert.equal(productSchema.safeParse(p).success,false)}});
+test('variants must reference options belonging to their product axes',()=>{const p=fixture();p.variants[0].options[p.axes[0].id]='foreign';assert.equal(productSchema.safeParse(p).success,false)});
+test('duplicate option combinations are rejected',()=>{const p=fixture();p.variants[1].options={...p.variants[0].options};assert.equal(productSchema.safeParse(p).success,false)});
+test('price adjustment cannot produce a negative selling price',()=>{const p=fixture();p.variants[0].adjustment=-p.basePrice!-1;assert.equal(productSchema.safeParse(p).success,false)});
+test('unattached variant media is rejected',()=>{const p=fixture();p.variants[0].mediaIds=['foreign'];assert.equal(productSchema.safeParse(p).success,false)});
+test('delivery range must be ordered',()=>{const p=fixture();p.leadMin=14;p.leadMax=10;assert.equal(productSchema.safeParse(p).success,false)});

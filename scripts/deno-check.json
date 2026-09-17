@@ -1,0 +1,1 @@
+{"imports":{"zod":"../node_modules/zod/index.d.ts","@supabase/supabase-js":"../node_modules/@supabase/supabase-js/dist/module/index.d.ts"},"compilerOptions":{"strict":true}}

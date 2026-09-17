@@ -1,0 +1,52 @@
+{
+  "name": "thuraya-store",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test tests/unit/*.test.ts",
+    "test:e2e": "playwright test",
+    "build": "npm run typecheck && vite build && node --import tsx scripts/prerender.tsx",
+    "build:preview-demo": "node scripts/build-preview-demo.mjs",
+    "verify:preview-demo": "node --import tsx scripts/verify-preview-demo-build.ts",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "demo": "vite --mode demo --host 127.0.0.1 --port 5173",
+    "test:db": "node --import tsx scripts/check-database.ts",
+    "test:edge": "deno check --config supabase/functions/deno.json supabase/functions/store-api/index.ts supabase/functions/notification-worker/index.ts supabase/functions/media-delivery/index.ts supabase/functions/media-cleanup/index.ts supabase/functions/payment-webhook/index.ts supabase/functions/notification-receipt/index.ts"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/noto-naskh-arabic": "^5.3.0",
+    "@fontsource/noto-serif-hebrew": "^5.3.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@electric-sql/pglite": "^0.5.8",
+    "@eslint/js": "^9.25.0",
+    "@playwright/test": "^1.51.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "deno": "^2.9.6",
+    "eslint": "^9.25.0",
+    "sharp": "^0.34.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.30.0",
+    "vite": "^6.3.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

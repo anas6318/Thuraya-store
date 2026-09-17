@@ -1,0 +1,7 @@
+import {useEffect,useRef} from 'react';
+import {useStore} from '../store';
+type TurnstileApi={render:(node:HTMLElement,options:{sitekey:string;language:string;callback:(token:string)=>void;'expired-callback':()=>void;'error-callback':()=>void})=>string;remove:(id:string)=>void};
+declare global{interface Window{turnstile?:TurnstileApi}}
+let loader:Promise<void>|undefined;
+function loadWidget(){return loader??=new Promise<void>((resolve,reject)=>{if(window.turnstile)return resolve();const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.onload=()=>resolve();script.onerror=()=>{loader=undefined;reject(new Error('verification_unavailable'))};document.head.appendChild(script)})}
+export function AntiAbuse({onToken}:{onToken:(token:string)=>void}){const node=useRef<HTMLDivElement>(null);const callback=useRef(onToken);callback.current=onToken;const {locale}=useStore();const key=import.meta.env?.VITE_TURNSTILE_SITE_KEY||'';useEffect(()=>{if(!key)return;let disposed=false;let widget:string|undefined;void loadWidget().then(()=>{if(!disposed&&node.current&&window.turnstile)widget=window.turnstile.render(node.current,{sitekey:key,language:locale,callback:token=>callback.current(token),'expired-callback':()=>callback.current(''),'error-callback':()=>callback.current('')})}).catch(()=>callback.current(''));return()=>{disposed=true;if(widget)window.turnstile?.remove(widget)}},[key,locale]);return key?<div ref={node}/>:null}

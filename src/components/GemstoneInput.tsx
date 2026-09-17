@@ -1,0 +1,3 @@
+import {useId} from 'react';
+import {gemstoneTypes,gemstoneLabel} from '../../shared/gemstones';
+export function GemstoneInput({value,onChange}:{value:string;onChange:(value:string)=>void}){const id=useId();return <label className="field"><span>Stone type</span><input list={id} value={value} onChange={e=>onChange(e.target.value)} placeholder="Leave unknown or inherited type empty"/><datalist id={id}>{gemstoneTypes.map(type=><option key={type} value={type}>{gemstoneLabel(type,'en')}</option>)}</datalist><small>Moissanite, lab-grown diamond, or another confirmed stone type. Grades and certification must be configured for this piece.</small></label>}

@@ -1,0 +1,8 @@
+import {z} from 'zod';
+import type {CartLine,Product,Settings,ShippingZone} from './domain.ts';
+const name=z.object({ar:z.string().trim().max(2000),he:z.string().trim().max(2000),en:z.string().trim().max(2000)}).strict();
+export const shippingZoneSchema=z.object({id:z.string().min(1).max(100),name,country:z.literal('IL'),cities:z.array(z.string().trim().min(1).max(80)).max(1000),price:z.number().int().min(0).max(2147483647),etaMin:z.number().int().min(0).max(365),etaMax:z.number().int().min(0).max(365),active:z.boolean()}).strict().refine(z=>z.etaMax>=z.etaMin,{message:'Maximum arrival days must follow minimum arrival days'}).refine(z=>!z.active||Object.values(z.name).every(x=>x.length>0),{message:'Active zones require Arabic, Hebrew and English names'});
+export function shipsTo(zone:ShippingZone,country:string,city:string){return zone.active&&country==='IL'&&zone.country===country&&(!zone.cities.length||zone.cities.includes(city.trim()))}
+export function assertShippingProducts(lines:CartLine[],products:Product[],country:string){if(country!=='IL'||lines.some(line=>!products.find(p=>p.id===line.productId)?.shippingCountries.includes(country)))throw new Error('shipping_unavailable')}
+export function shippingEta(lines:CartLine[],products:Product[],settings:Pick<Settings,'leadMin'|'leadMax'>,zone?:ShippingZone){return {etaMin:Math.max(settings.leadMin,zone?.etaMin??0,...lines.map(l=>products.find(p=>p.id===l.productId)?.leadMin??settings.leadMin)),etaMax:Math.max(settings.leadMax,zone?.etaMax??0,...lines.map(l=>products.find(p=>p.id===l.productId)?.leadMax??settings.leadMax))}}
+export function quoteKey(lines:CartLine[],zoneId:string,city:string,code:string){return JSON.stringify([lines,zoneId,city.trim(),code])}

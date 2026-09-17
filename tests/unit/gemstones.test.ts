@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {gemstoneKey,gemstoneLabel,productGemstones} from '../../shared/gemstones';
+import {shopProducts} from '../../shared/catalog-selection';
+import {productSchema} from '../../shared/product-schema';
+import {initialData} from '../../src/seed';
+const product=initialData(true).products.find(p=>p.isDemo)!;
+test('known diamond spellings resolve to the same stable filter identity',()=>{for(const name of ['Lab-Grown Diamond','lab_grown_diamond','lab diamond','lab-grown diamonds'])assert.equal(gemstoneKey(name),'lab_grown_diamond')});
+test('both gemstone families have Arabic Hebrew and English labels',()=>{for(const type of ['moissanite','lab_grown_diamond'])for(const locale of ['ar','he','en'] as const){const label=gemstoneLabel(type,locale);assert.ok(label.length);assert.notEqual(label,type)}});
+test('custom stone types remain supported without a fixed enum migration',()=>{assert.equal(gemstoneLabel('Sapphire','en'),'Sapphire');assert.ok(productSchema.safeParse({...product,gem:{type:'Sapphire'}}).success)});
+test('lab diamond attributes remain independent optional structured data',()=>{const gem={type:'lab_grown_diamond',carat:1.2,shape:'oval',cutGrade:'configured cut',color:'F',clarity:'VS1',certificationType:'owner-confirmed laboratory',certificationIncluded:true};const parsed=productSchema.parse({...product,gem});assert.deepEqual(parsed.gem,gem);assert.deepEqual(productSchema.parse({...product,gem:{type:'lab_grown_diamond'}}).gem,{type:'lab_grown_diamond'})});
+test('active lab diamond variants are discoverable within a moissanite base product',()=>{const p={...product,gem:{type:'moissanite'},variants:product.variants.map((v,i)=>({...v,active:true,gem:{type:i?'moissanite':'lab_grown_diamond'}}))};assert.ok(productGemstones(p).includes('lab_grown_diamond'));assert.equal(shopProducts([p],new URLSearchParams('gemstone=lab_grown_diamond')).length,1);assert.equal(shopProducts([p],new URLSearchParams('gemstone=ruby')).length,0)});
+test('inactive gemstone variants do not create false availability',()=>{const p={...product,gem:{type:'moissanite'},variants:product.variants.map(v=>({...v,active:false,gem:{type:'lab_grown_diamond'}}))};assert.deepEqual(productGemstones(p),[]);assert.equal(shopProducts([p],new URLSearchParams('gemstone=lab_grown_diamond')).length,0)});

@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {settingsSchema} from '../../shared/settings-schema.ts';
+import {initialData} from '../../src/seed.ts';
+const fixture=()=>structuredClone(initialData().settings);
+test('initial settings satisfy the operational contract',()=>assert.equal(settingsSchema.safeParse(fixture()).success,true));
+test('settings reject secret and arbitrary fields',()=>assert.equal(settingsSchema.safeParse({...fixture(),RESEND_API_KEY:'secret'}).success,false));
+test('settings reject duplicate status channel mappings',()=>{const s=fixture();s.templates.push({...s.templates[0],id:'duplicate'});assert.equal(settingsSchema.safeParse(s).success,false)});
+test('enabled templates require every launch translation',()=>{const s=fixture();s.templates[0].enabled=true;s.templates[0].body.he='';assert.equal(settingsSchema.safeParse(s).success,false)});
+test('settings reject inverted delivery windows and missing status labels',()=>{const s=fixture();s.leadMax=s.leadMin-1;assert.equal(settingsSchema.safeParse(s).success,false);const other=fixture();Reflect.deleteProperty(other.statusLabels,'delivered');assert.equal(settingsSchema.safeParse(other).success,false)});
