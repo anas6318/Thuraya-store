@@ -1,6 +1,6 @@
 import { useStorefrontMotion } from "./useStorefrontMotion";
 import { configureAnalytics } from "../services/analytics";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -9,6 +9,7 @@ import {
   Heart,
   User,
   ArrowUpRight,
+  ChevronDown,
 } from "lucide-react";
 import { useStore } from "../store";
 import { t } from "../i18n";
@@ -23,18 +24,36 @@ export function Layout({ children }: { children: ReactNode }) {
   const { locale, data } = s;
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [q, setQ] = useState("");
   const [consent, setConsent] = useState(true);
+  const languageMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   useStorefrontMotion(location.pathname);
   useEffect(() => {
     setMenu(false);
     setSearch(false);
+    setLanguageOpen(false);
     s.setBagOpen(false);
     window.scrollTo(0, 0);
   }, [location.pathname]);
   useEffect(() => setConsent(!!localStorage.getItem("thuraya.consent")), []);
+  useEffect(() => {
+    if (!languageOpen) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) setLanguageOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLanguageOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [languageOpen]);
   const links = [
     ["shop", "shop"],
     ["about", "story"],
@@ -43,6 +62,10 @@ export function Layout({ children }: { children: ReactNode }) {
   ] as const;
   const language = (l: Locale) =>
     navigate(localePath(location.pathname, l) + location.search);
+  const languageLabel = (l: Locale) =>
+    l === "ar" ? "العربية" : l === "he" ? "עברית" : "EN";
+  const languageControlLabel =
+    locale === "ar" ? "تغيير اللغة" : locale === "he" ? "החלפת שפה" : "Change language";
   return (
     <>
       <a href="#main" className="skip">
@@ -109,16 +132,38 @@ export function Layout({ children }: { children: ReactNode }) {
             <ShoppingBag size={20} />
             <span><bdi>{formatNumber(s.cart.reduce((n, l) => n + l.quantity, 0), locale)}</bdi></span>
           </button>
-          <select
-            className="language desktop-only"
-            aria-label="Language"
-            value={locale}
-            onChange={(e) => language(e.target.value as Locale)}
-          >
-            <option value="ar">العربية</option>
-            <option value="he">עברית</option>
-            <option value="en">English</option>
-          </select>
+          <div className="language-menu desktop-only" ref={languageMenuRef}>
+            <button
+              className="language-trigger"
+              type="button"
+              aria-label={languageControlLabel}
+              aria-haspopup="menu"
+              aria-controls="header-language-menu"
+              aria-expanded={languageOpen}
+              onClick={() => setLanguageOpen((open) => !open)}
+            >
+              <span>{languageLabel(locale)}</span>
+              <ChevronDown aria-hidden="true" size={13} />
+            </button>
+            {languageOpen && (
+              <div className="language-popover" id="header-language-menu" role="menu">
+                {locales.map((l) => (
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={l === locale}
+                    key={l}
+                    onClick={() => {
+                      language(l);
+                      setLanguageOpen(false);
+                    }}
+                  >
+                    {languageLabel(l)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <main className="storefront" id="main" tabIndex={-1}>

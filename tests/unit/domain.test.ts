@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {initialData} from '../../src/seed.ts';
 import {cartPrice,variantPrice,publicationErrors,assertTransition,transitions,can,contactHash,constantTimeEqual,normalizeContact,localePath,searchMatch,deliveryRange,parity,notificationKey,mediaAllowed,validateDiscount,publicOrder,formatMoney,formatNumber,formatDate} from '../../shared/logic.ts';
 import {checkoutSchema} from '../../shared/validation.ts';
@@ -41,6 +41,7 @@ test('localized Hebrew search',()=>assert.equal(searchMatch(p,'עגילי'),true
 test('delivery window uses configured days',()=>assert.equal(deliveryRange(10,14,new Date('2026-01-01'))[1].toISOString().slice(0,10),'2026-01-15'));
 test('invalid lead range rejected',()=>assert.throws(()=>deliveryRange(14,10)));
 test('Arabic customer formatting always uses Western digits',()=>{for(const value of [formatMoney(38000,'ar'),formatNumber(10,'ar'),formatDate('2026-09-18T00:00:00Z','ar')]){assert.match(value,/[0-9]/);assert.doesNotMatch(value,/[٠-٩]/)}});
+test('Arabic ships its own weighted typeface and the header avoids a native language select',()=>{const main=readFileSync(new URL('../../src/main.tsx',import.meta.url),'utf8');const layout=readFileSync(new URL('../../src/components/Layout.tsx',import.meta.url),'utf8');assert.match(main,/noto-naskh-arabic\/arabic-600\.css/);assert.match(main,/noto-naskh-arabic\/arabic-700\.css/);assert.match(layout,/language-trigger/);assert.doesNotMatch(layout,/<select\s+className="language/)});
 for(const [key,v] of Object.entries(words))test(`translation parity: ${key}`,()=>assert.ok(parity(v)));
 test('notification idempotency separates channel and audience',()=>{const n={eventId:'x',channel:'email' as const,audience:'customer' as const};assert.equal(notificationKey(n),notificationKey({...n}));assert.notEqual(notificationKey(n),notificationKey({...n,audience:'owner'}))});
 test('media MIME extension spoof rejected',()=>assert.equal(mediaAllowed('image/jpeg',100,'photo.svg'),false));
