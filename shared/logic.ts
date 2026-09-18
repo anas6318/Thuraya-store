@@ -18,7 +18,11 @@ export function localePath(path:string,locale:Locale){return /^\/(ar|he|en)(\/|$
 export function distance(a:string,b:string):number{const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=old}}return row[b.length]}
 export function searchMatch(p:Product,q:string){const hay=[...Object.values(p.name),...p.tags,p.sku].join(' ').toLocaleLowerCase();return q.trim().toLocaleLowerCase().split(/\s+/).every(w=>hay.includes(w)||w.length>3&&hay.split(/\s+/).some(x=>distance(x,w)<=1))}
 export function deliveryRange(min:number,max:number,at=new Date()){if(!Number.isInteger(min)||max<min||min<0)throw new Error('invalid_delivery');return [new Date(at.getTime()+min*86400000),new Date(at.getTime()+max*86400000)]}
-export const formatMoney=(cents:number,locale:Locale)=>new Intl.NumberFormat(locale==='ar'?'ar-IL':locale==='he'?'he-IL':'en-IL',{style:'currency',currency:'ILS',maximumFractionDigits:2}).format(cents/100);
+/** Customer-facing Arabic remains RTL, but THURAYA deliberately uses Western digits. */
+export const localeTag=(locale:Locale)=>locale==='ar'?'ar-IL-u-nu-latn':locale==='he'?'he-IL':'en-IL';
+export const formatNumber=(value:number,locale:Locale,options:Intl.NumberFormatOptions={})=>new Intl.NumberFormat(localeTag(locale),{numberingSystem:'latn',...options}).format(value);
+export const formatDate=(value:Date|string|number,locale:Locale,options:Intl.DateTimeFormatOptions={dateStyle:'medium'})=>new Intl.DateTimeFormat(localeTag(locale),{numberingSystem:'latn',...options}).format(new Date(value));
+export const formatMoney=(cents:number,locale:Locale)=>formatNumber(cents/100,locale,{style:'currency',currency:'ILS',maximumFractionDigits:2});
 export const parity=(x:Localized)=>locales.every(l=>typeof x[l]==='string'&&x[l].trim().length>0);
 export function notificationKey(n:Pick<Notification,'eventId'|'channel'|'audience'>){return `${n.eventId}:${n.channel}:${n.audience}`}
 export function canRetry(n:Notification){return n.status==='failed'&&n.attempts<5&&!n.uncertain&&(!n.firstAttemptAt||Date.parse(n.firstAttemptAt)>Date.now()-23*60*60*1000)}
