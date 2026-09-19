@@ -13,17 +13,28 @@ import {
   Minus,
   SlidersHorizontal,
   Maximize2,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import { useStore } from "../store";
 import { t } from "../i18n";
 import { initialMedia } from "../seed";
-import { MediaView, ProductCard, Empty, Modal, Price } from "../components/ui";
+import { MediaView, ProductCard, Empty, Modal, Price, Isolate, Glint } from "../components/ui";
 import { formatNumber, variantPrice } from "../../shared/logic";
 import { shopProducts, sectionProducts } from "../../shared/catalog-selection";
 import { rememberHistory } from "../../shared/local-history";
 export function Home() {
   const { data, locale } = useStore();
   const products = data.products.filter((p) => p.featured);
+  const lead = (
+    <bdi>
+      {formatNumber(data.settings.leadMin, locale)}–
+      {formatNumber(data.settings.leadMax, locale)}
+    </bdi>
+  );
+  const categories = data.categories
+    .filter((c) => c.active && data.products.some((p) => p.categoryId === c.id))
+    .sort((a, b) => a.position - b.position);
   return (
     <>
       {data.sections
@@ -35,16 +46,21 @@ export function Home() {
             s.selection.some((id) => id.startsWith("collection:"))
           )
             return (
-              <section data-layout={s.layout} className="section" key={s.id}>
-                <h2>{s.title[locale]}</h2>
-                <div className="product-grid">
+              <section data-layout={s.layout} className="section vitrine" key={s.id}>
+                <div className="section-head">
+                  <div>
+                    <span className="overline">{t(locale, "vitrine")}</span>
+                    <h2>{s.title[locale]}</h2>
+                  </div>
+                </div>
+                <div className="collection-cards">
                   {data.collections
                     .filter(
                       (c) =>
                         c.active && s.selection.includes("collection:" + c.id),
                     )
                     .map((c) => (
-                      <article key={c.id}>
+                      <article key={c.id} className="collection-card">
                         {c.image && (
                           <MediaView
                             media={
@@ -62,14 +78,18 @@ export function Home() {
                             }
                           />
                         )}
-                        <h3>
-                          <Link to={`/${locale}/collection/${c.slug}`}>
-                            {c.name[locale]}
-                          </Link>
-                        </h3>
-                        <p>{c.description[locale]}</p>
+                        <div>
+                          <h3>
+                            <Link to={`/${locale}/collection/${c.slug}`}>
+                              <Isolate text={c.name[locale]} />
+                            </Link>
+                          </h3>
+                          <p>{c.description[locale]}</p>
+                        </div>
                       </article>
                     ))}
+                </div>
+                <div className="product-grid vitrine-row">
                   {sectionProducts(data.products, s).map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
@@ -79,20 +99,7 @@ export function Home() {
           if (s.kind === "hero")
             return (
               <section data-layout={s.layout} key={s.id} className="hero">
-                <div className="hero-copy">
-                  <span className="overline">THURAYA · ثُرَيّا</span>
-                  <h1>{s.title[locale]}</h1>
-                  <p>{s.body[locale]}</p>
-                  <Link className="button ice" to={`/${locale}${s.href}`}>
-                    {s.cta[locale]}
-                    <ArrowUpRight size={18} />
-                  </Link>
-                  <Link className="text-link" to={`/${locale}/about`}>
-                    {t(locale, "discover")}
-                  </Link>
-                  <span className="hero-number">01 / THURAYA</span>
-                </div>
-                <div className="hero-art">
+                <div className="hero-art" aria-hidden="true">
                   <MediaView
                     media={
                       s.imageMedia ||
@@ -101,9 +108,40 @@ export function Home() {
                         src: s.image,
                       }
                     }
+                    sizes="(max-width:820px) 100vw, 60vw"
                     eager
                   />
                 </div>
+                <div className="hero-horizon" aria-hidden="true">
+                  <Glint />
+                </div>
+                <div className="hero-copy">
+                  <div className="hero-above">
+                    <span className="overline">
+                      {t(locale, "made")} · {lead} {t(locale, "days")}
+                    </span>
+                    <h1>{s.title[locale]}</h1>
+                  </div>
+                  <div className="hero-below">
+                    <p>{s.body[locale]}</p>
+                    <div className="hero-actions">
+                      <Link className="button ice" to={`/${locale}${s.href}`}>
+                        {s.cta[locale]}
+                        <ArrowUpRight size={16} strokeWidth={1.5} />
+                      </Link>
+                      <Link className="text-link" to={`/${locale}/about`}>
+                        {t(locale, "discover")}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+                <ul className="hero-facts">
+                  <li>{t(locale, "deliveryIsrael")}</li>
+                  <li>
+                    {t(locale, "preparedIn")} {lead} {t(locale, "days")}
+                  </li>
+                  <li>{t(locale, "personalConcierge")}</li>
+                </ul>
               </section>
             );
           if (s.kind === "collections")
@@ -112,18 +150,18 @@ export function Home() {
                 ? data.products.some((p) => s.selection.includes(p.id))
                 : products.length
             ) ? (
-              <section data-layout={s.layout} key={s.id} className="section">
+              <section data-layout={s.layout} key={s.id} className="section vitrine">
                 <div className="section-head">
                   <div>
-                    <span className="overline">THURAYA</span>
+                    <span className="overline">{t(locale, "vitrine")}</span>
                     <h2>{s.title[locale]}</h2>
                   </div>
                   <Link className="text-link" to={`/${locale}/shop`}>
                     {t(locale, "all")}
-                    <ArrowUpRight size={17} />
+                    <ArrowUpRight size={15} strokeWidth={1.5} />
                   </Link>
                 </div>
-                <div className="product-grid">
+                <div className="product-grid vitrine-row">
                   {sectionProducts(data.products, s).map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
@@ -135,45 +173,56 @@ export function Home() {
                 key={s.id}
                 className="section collection-intro"
               >
-                <h2>{s.title[locale]}</h2>
+                <span className="overline">{t(locale, "vitrine")}</span>
+                <h2>{t(locale, "noProducts")}</h2>
                 <p>{t(locale, "noProductsBody")}</p>
-                <div className="editorial-pair">
+                <div className="editorial-pair vitrine-row">
                   {[initialMedia[0], initialMedia[3]].map((m) => (
-                    <MediaView media={m} key={m.id} />
+                    <div className="card-media" key={m.id}>
+                      <MediaView media={m} />
+                      <span className="horizon" aria-hidden="true" />
+                    </div>
                   ))}
                 </div>
               </section>
             );
-          if (
-            s.kind === "categories" &&
-            !data.categories.some(
-              (c) =>
-                c.active && data.products.some((p) => p.categoryId === c.id),
-            )
-          )
-            return null;
+          if (s.kind === "categories" && !categories.length) return null;
           if (s.kind === "categories")
             return (
               <section
                 data-layout={s.layout}
                 key={s.id}
-                className="category-strip section"
+                className="category-index section"
               >
-                <h2>{s.title[locale]}</h2>
-                <div>
-                  {data.categories
-                    .filter(
-                      (c) =>
-                        c.active &&
-                        data.products.some((p) => p.categoryId === c.id),
-                    )
-                    .map((c) => (
-                      <Link to={`/${locale}/shop?category=${c.id}`} key={c.id}>
-                        {c.name[locale]}
-                        <ArrowUpRight size={20} />
-                      </Link>
-                    ))}
+                <div className="section-head">
+                  <h2>{s.title[locale]}</h2>
                 </div>
+                <ul>
+                  {categories.map((c) => {
+                    const pieces = data.products.filter(
+                      (p) => p.categoryId === c.id,
+                    );
+                    const cover = pieces[0]?.media[0];
+                    return (
+                      <li key={c.id}>
+                        <Link to={`/${locale}/shop?category=${c.id}`}>
+                          <span className="category-thumb" aria-hidden="true">
+                            {cover && <MediaView media={cover} sizes="120px" />}
+                          </span>
+                          <span className="category-name">{c.name[locale]}</span>
+                          <span className="category-count">
+                            <bdi>{formatNumber(pieces.length, locale)}</bdi>
+                          </span>
+                          <ArrowUpRight
+                            className="category-arrow"
+                            size={20}
+                            strokeWidth={1.2}
+                          />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </section>
             );
           if (s.kind === "standard")
@@ -183,26 +232,29 @@ export function Home() {
                 key={s.id}
                 className="standard section"
               >
-                <span className="overline">THURAYA</span>
-                <h2>{s.title[locale]}</h2>
-                <p>{s.body[locale]}</p>
-                <div className="standard-grid">
-                  <article>
-                    <span>01</span>
-                    <h3>{t(locale, "piece")}</h3>
-                    <p>{t(locale, "standardBody")}</p>
-                  </article>
-                  <article>
-                    <span>02</span>
-                    <h3>{t(locale, "made")}</h3>
-                    <p>{t(locale, "journeyBody")}</p>
-                  </article>
-                  <article>
-                    <span>03</span>
+                <div className="standard-intro">
+                  <h2>{s.title[locale]}</h2>
+                  <p>{s.body[locale]}</p>
+                </div>
+                <ol className="standard-grid">
+                  <li>
+                    <h3>{t(locale, "stepChoose")}</h3>
+                    <p>{t(locale, "stepChooseBody")}</p>
+                  </li>
+                  <li>
+                    <h3>
+                      {t(locale, "made")}
+                      <span className="standard-figure">
+                        {lead} {t(locale, "days")}
+                      </span>
+                    </h3>
+                    <p>{t(locale, "stepMadeBody")}</p>
+                  </li>
+                  <li>
                     <h3>{t(locale, "concierge")}</h3>
                     <p>{t(locale, "inquiryBody")}</p>
-                  </article>
-                </div>
+                  </li>
+                </ol>
               </section>
             );
           if (s.kind === "editorial")
@@ -217,16 +269,19 @@ export function Home() {
                         src: s.image,
                       }
                     }
+                    sizes="(max-width:820px) 100vw, 55vw"
                   />
+                  <span className="horizon" aria-hidden="true" />
                 </div>
                 <div className="editorial-copy">
-                  <span className="overline">THURAYA</span>
                   <h2>{s.title[locale]}</h2>
-                  <p>{s.body[locale]}</p>
-                  <Link className="button outline" to={`/${locale}${s.href}`}>
-                    {s.cta[locale]}
-                    <ArrowUpRight size={18} />
-                  </Link>
+                  <div className="editorial-below">
+                    <p>{s.body[locale]}</p>
+                    <Link className="button outline" to={`/${locale}${s.href}`}>
+                      {s.cta[locale]}
+                      <ArrowUpRight size={16} strokeWidth={1.5} />
+                    </Link>
+                  </div>
                 </div>
               </section>
             );
@@ -237,13 +292,18 @@ export function Home() {
                 key={s.id}
                 className="story-block section"
               >
-                <span className="overline">THURAYA · ثُرَيّا</span>
-                <h2>{s.title[locale]}</h2>
-                <p>{s.body[locale]}</p>
-                <Link className="text-link" to={`/${locale}/about`}>
-                  {t(locale, "discover")}
-                  <ArrowUpRight size={18} />
-                </Link>
+                <p className="story-name" aria-hidden="true" lang="ar" dir="rtl">
+                  ثُرَيّا
+                </p>
+                <div>
+                  <span className="overline">{t(locale, "nameOrigin")}</span>
+                  <h2>{s.title[locale]}</h2>
+                  <p>{s.body[locale]}</p>
+                  <Link className="text-link" to={`/${locale}/about`}>
+                    {t(locale, "discover")}
+                    <ArrowUpRight size={15} strokeWidth={1.5} />
+                  </Link>
+                </div>
               </section>
             );
           if (s.kind === "education")
@@ -254,14 +314,11 @@ export function Home() {
                 className="section journal-preview"
               >
                 <div className="journal-heading">
-                  <div>
-                    <span className="overline">THURAYA</span>
-                    <h2>{s.title[locale]}</h2>
-                    <p>{s.body[locale]}</p>
-                  </div>
+                  <span className="overline">{s.title[locale]}</span>
+                  <h2>{t(locale, "twoStones")}</h2>
                   <Link className="text-link" to={`/${locale}${s.href}`}>
                     {s.cta[locale]}
-                    <ArrowUpRight size={20} />
+                    <ArrowUpRight size={15} strokeWidth={1.5} />
                   </Link>
                 </div>
                 <div className="stone-journal">
@@ -275,13 +332,17 @@ export function Home() {
                     )
                     .map((page) => (
                       <article key={page.id}>
+                        <Glint />
                         <h3>
                           <Link to={`/${locale}/journal/${page.slug}`}>
                             {page.title[locale]}
-                            <ArrowUpRight size={18} />
                           </Link>
                         </h3>
                         <p>{page.body[locale]}</p>
+                        <span className="read-more" aria-hidden="true">
+                          {t(locale, "read")}
+                          <ArrowUpRight size={14} strokeWidth={1.5} />
+                        </span>
                       </article>
                     ))}
                 </div>
@@ -292,13 +353,16 @@ export function Home() {
               <section
                 data-layout={s.layout}
                 key={s.id}
-                className="section story-block"
+                className="section note-block"
               >
                 <h2>{s.title[locale]}</h2>
-                <p>{s.body[locale]}</p>
-                <Link className="text-link" to={`/${locale}${s.href}`}>
-                  {s.cta[locale]}
-                </Link>
+                <div>
+                  <p>{s.body[locale]}</p>
+                  <Link className="text-link" to={`/${locale}${s.href}`}>
+                    {s.cta[locale]}
+                    <ArrowUpRight size={15} strokeWidth={1.5} />
+                  </Link>
+                </div>
               </section>
             );
           return null;
@@ -324,6 +388,12 @@ export function Shop() {
     else n.delete(key);
     setParams(n);
   };
+  const railCategories = data.categories
+    .filter((c) => c.active && data.products.some((p) => p.categoryId === c.id))
+    .sort((a, b) => a.position - b.position);
+  const activeFilters = ["gemstone", "metal", "shape", "min", "max"].filter(
+    (k) => params.get(k),
+  ).length;
   const products = shopProducts(
     data.products,
     params,
@@ -403,9 +473,14 @@ export function Shop() {
           />
         </div>
       </label>
-      <button className="text-link" onClick={() => setParams({})}>
-        {t(locale, "clear")}
-      </button>
+      <div className="filter-actions">
+        <button className="button" type="button" onClick={() => setFilters(false)}>
+          {t(locale, "piecesLabel")} · <bdi>{formatNumber(products.length, locale)}</bdi>
+        </button>
+        <button className="text-link" type="button" onClick={() => setParams({})}>
+          {t(locale, "clear")}
+        </button>
+      </div>
     </>
   );
   if (slug && !collection && !loading)
@@ -413,28 +488,69 @@ export function Shop() {
   return (
     <section className="section shop">
       <div className="page-heading">
-        <span className="overline">THURAYA</span>
+        <span className="overline">
+          {isWish ? "THURAYA" : t(locale, "vitrine")}
+        </span>
         <h1>
-          {isWish
-            ? t(locale, "wishlist")
-            : collection?.name[locale] || t(locale, "shop")}
+          {isWish ? (
+            t(locale, "wishlist")
+          ) : (
+            <Isolate
+              text={
+                collection?.name[locale] ||
+                data.categories.find((c) => c.id === category)?.name[locale] ||
+                t(locale, "shop")
+              }
+            />
+          )}
         </h1>
         <p>{collection?.description[locale] || t(locale, "heroBody")}</p>
       </div>
+      {!isWish && !slug && railCategories.length > 1 && (
+        <nav className="category-rail" aria-label={t(locale, "category")}>
+          <button
+            type="button"
+            aria-pressed={!category}
+            onClick={() => set("category", "")}
+          >
+            {t(locale, "all")}
+          </button>
+          {railCategories.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              aria-pressed={category === c.id}
+              onClick={() => set("category", c.id)}
+            >
+              {c.name[locale]}
+            </button>
+          ))}
+        </nav>
+      )}
       <div className="catalog-toolbar">
         <label className="catalog-search">
           <span className="sr-only">{t(locale, "search")}</span>
+          <Search size={16} strokeWidth={1.4} aria-hidden="true" />
           <input
             placeholder={t(locale, "search")}
             value={q}
             onChange={(e) => set("q", e.target.value)}
           />
         </label>
-        <button className="text-link" onClick={() => setFilters(true)}>
-          <SlidersHorizontal size={18} />
+        <span className="catalog-count">
+          {t(locale, "piecesLabel")}{" "}
+          <bdi>{formatNumber(products.length, locale)}</bdi>
+        </span>
+        <button className="toolbar-button" onClick={() => setFilters(true)}>
+          <SlidersHorizontal size={16} strokeWidth={1.4} />
           {t(locale, "filter")}
+          {activeFilters > 0 && (
+            <span className="filter-count">
+              <bdi>{formatNumber(activeFilters, locale)}</bdi>
+            </span>
+          )}
         </button>
-        <label>
+        <label className="sort-control">
           <span className="sr-only">{t(locale, "sort")}</span>
           <select
             aria-label={t(locale, "sort")}
@@ -446,8 +562,8 @@ export function Shop() {
             <option value="low">{t(locale, "low")}</option>
             <option value="high">{t(locale, "high")}</option>
           </select>
+          <ChevronDown size={13} strokeWidth={1.5} aria-hidden="true" />
         </label>
-        <span><bdi>{formatNumber(products.length, locale)}</bdi></span>
       </div>
       {products.length ? (
         <div className="product-grid">
@@ -513,40 +629,87 @@ export function ProductPage() {
       .filter(([, v]) => v !== undefined && v !== null && v !== "")
       .map(([k, v]) => (
         <div className="spec-row" key={k}>
-          <span>{specLabel(k, locale)}</span>
-          <bdi>
-            {typeof v === "boolean"
-              ? v
-                ? "✓"
-                : "—"
-              : k === "type"
-                ? gemstoneLabel(String(v), locale)
-                : typeof v === "number"
-                  ? formatNumber(v, locale)
-                  : String(v)}
-          </bdi>
+          <dt>{specLabel(k, locale)}</dt>
+          <dd>
+            <bdi>
+              {typeof v === "boolean"
+                ? v
+                  ? "✓"
+                  : "—"
+                : k === "type"
+                  ? gemstoneLabel(String(v), locale)
+                  : typeof v === "number"
+                    ? formatNumber(v, locale)
+                    : String(v)}
+            </bdi>
+          </dd>
         </div>
       ));
+  const specGroups = (
+    [
+      ["stone", gem],
+      ["metal", metal],
+      ["measurements", measurements],
+    ] as const
+  ).filter(([, obj]) =>
+    Object.values(obj).some((v) => v !== undefined && v !== null && v !== ""),
+  );
+  const selectedLabels = p.axes
+    .map((axis) => {
+      const id = options[axis.id] || axis.values[0]?.id;
+      return axis.values.find((v) => v.id === id)?.label[locale];
+    })
+    .filter(Boolean);
+  const category = data.categories.find((c) => c.id === p.categoryId);
+  const unavailable =
+    !variant || (variant.stock !== null && variant.stock < quantity);
+  const leadMin = p.leadMin ?? data.settings.leadMin;
+  const leadMax = p.leadMax ?? data.settings.leadMax;
+  const related = data.products
+    .filter(
+      (x) =>
+        x.id !== p.id &&
+        (x.categoryId === p.categoryId ||
+          x.collectionIds.some((c) => p.collectionIds.includes(c))),
+    )
+    .slice(0, 4);
+  const reviews = data.reviews.filter(
+    (r) => r.productId === p.id && r.status === "approved",
+  );
   return (
     <>
-      <div className="breadcrumbs section">
+      <nav className="breadcrumbs section" aria-label="Breadcrumb">
         <Link to={`/${locale}`}>THURAYA</Link>
-        <span>/</span>
+        <span aria-hidden="true">/</span>
         <Link to={`/${locale}/shop`}>{t(locale, "shop")}</Link>
-        <span>/</span>
-        <span>{p.name[locale]}</span>
-      </div>
+        {category && (
+          <>
+            <span aria-hidden="true">/</span>
+            <Link to={`/${locale}/shop?category=${category.id}`}>
+              {category.name[locale]}
+            </Link>
+          </>
+        )}
+      </nav>
       <section className="product-detail section">
-        <div className="gallery">
+        <div className="gallery" aria-label={t(locale, "gallery")}>
           <div className="gallery-main">
-            {selected && <MediaView key={selected.id} media={selected} eager />}
+            {selected && <MediaView key={selected.id} media={selected} eager sizes="(max-width:820px) 100vw, 56vw" />}
+            <span className="horizon" aria-hidden="true" />
             <button
               className="icon zoom"
               aria-label={t(locale, "zoom")}
               onClick={() => setZoom(true)}
             >
-              <Maximize2 size={19} />
+              <Maximize2 size={17} strokeWidth={1.4} />
             </button>
+            {media.length > 1 && (
+              <span className="gallery-count" aria-hidden="true">
+                <bdi>
+                  {formatNumber(index + 1, locale)} / {formatNumber(media.length, locale)}
+                </bdi>
+              </span>
+            )}
           </div>
           {media.length > 1 && (
             <div className="thumbnails">
@@ -554,10 +717,10 @@ export function ProductPage() {
                 <button
                   key={m.id}
                   onClick={() => setIndex(i)}
-                    aria-label={`${t(locale, "piece")} ${formatNumber(i + 1, locale)}`}
+                  aria-label={`${t(locale, "image")} ${formatNumber(i + 1, locale)}`}
                   aria-pressed={i === index}
                 >
-                  <MediaView media={m} />
+                  <MediaView media={m} sizes="96px" />
                 </button>
               ))}
             </div>
@@ -565,51 +728,57 @@ export function ProductPage() {
         </div>
         <div className="product-copy">
           <span className="overline">
-            {p.isDemo
-              ? t(locale, "demoProduct")
-              : data.categories.find((c) => c.id === p.categoryId)?.name[
-                  locale
-                ]}
+            {category?.name[locale]}
+            {p.isDemo && (
+              <span className="demo-tag">{t(locale, "demoProduct")}</span>
+            )}
           </span>
-          <h1>{p.name[locale]}</h1>
+          <h1>
+            <Isolate text={p.name[locale]} />
+          </h1>
           <div className="product-price">
             {variant && <Price amount={variantPrice(p, variant)} />}
             <button
-              className="icon"
+              className="icon wish-inline"
               aria-label={t(locale, "wishlist")}
               aria-pressed={s.wishlist.includes(p.id)}
               onClick={() => s.toggleWish(p.id)}
             >
               <Heart
                 fill={s.wishlist.includes(p.id) ? "currentColor" : "none"}
-                size={20}
+                size={19}
+                strokeWidth={1.4}
               />
             </button>
           </div>
-          <p>{p.shortDescription[locale]}</p>
+          {p.shortDescription[locale] && (
+            <p className="product-lede">{p.shortDescription[locale]}</p>
+          )}
           <div className="variant-options">
             {p.axes.map((axis) => (
               <fieldset key={axis.id}>
                 <legend>{axis.label[locale]}</legend>
-                {axis.values.map((value) => (
-                  <button
-                    key={value.id}
-                    type="button"
-                    className={`option ${(options[axis.id] || axis.values[0]?.id) === value.id ? "active" : ""}`}
-                    aria-pressed={
-                      (options[axis.id] || axis.values[0]?.id) === value.id
-                    }
-                    onClick={() =>
-                      setOptions({ ...options, [axis.id]: value.id })
-                    }
-                  >
-                    {value.label[locale]}
-                  </button>
-                ))}
+                <div className="option-set">
+                  {axis.values.map((value) => (
+                    <button
+                      key={value.id}
+                      type="button"
+                      className={`option ${(options[axis.id] || axis.values[0]?.id) === value.id ? "active" : ""}`}
+                      aria-pressed={
+                        (options[axis.id] || axis.values[0]?.id) === value.id
+                      }
+                      onClick={() =>
+                        setOptions({ ...options, [axis.id]: value.id })
+                      }
+                    >
+                      <Isolate text={value.label[locale]} />
+                    </button>
+                  ))}
+                </div>
               </fieldset>
             ))}
           </div>
-          <button className="text-link" onClick={() => setGuide(true)}>
+          <button className="text-link guide-standalone" onClick={() => setGuide(true)}>
             {t(locale, "size")}
           </button>
           <div className="purchase-row">
@@ -618,33 +787,35 @@ export function ProductPage() {
                 aria-label={`${t(locale, "quantity")} −`}
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
               >
-                <Minus size={16} />
+                <Minus size={14} strokeWidth={1.5} />
               </button>
               <span aria-live="polite"><bdi>{formatNumber(quantity, locale)}</bdi></span>
               <button
                 aria-label={`${t(locale, "quantity")} +`}
                 onClick={() => setQuantity(Math.min(10, quantity + 1))}
               >
-                <Plus size={16} />
+                <Plus size={14} strokeWidth={1.5} />
               </button>
             </div>
-            <button
-              className="button"
-              disabled={
-                !variant || (variant.stock !== null && variant.stock < quantity)
-              }
-              onClick={add}
-            >
+            <button className="button" disabled={unavailable} onClick={add}>
               {t(locale, "add")}
             </button>
           </div>
+          {selectedLabels.length > 0 && (
+            <p className="selection-summary">
+              <span>{t(locale, "yourSelection")}</span>
+              <Isolate text={selectedLabels.join(" · ")} />
+            </p>
+          )}
           <div className="delivery-note">
-            <strong>{t(locale, p.madeToOrder ? "made" : "ready")}</strong>
-            <p>
-              {t(locale, "eta")}:{" "}
+            <div>
+              <strong>{t(locale, p.madeToOrder ? "made" : "ready")}</strong>
+              <p>{t(locale, "journeyBody")}</p>
+            </div>
+            <p className="delivery-figure">
+              <span>{t(locale, "eta")}</span>
               <bdi>
-                {formatNumber(p.leadMin ?? data.settings.leadMin, locale)}–
-                {formatNumber(p.leadMax ?? data.settings.leadMax, locale)}
+                {formatNumber(leadMin, locale)}–{formatNumber(leadMax, locale)}
               </bdi>{" "}
               {t(locale, "days")}
             </p>
@@ -655,32 +826,25 @@ export function ProductPage() {
               to={`/${locale}/concierge?product=${p.id}`}
             >
               {t(locale, "custom")}
-              <ArrowUpRight size={16} />
+              <ArrowUpRight size={15} strokeWidth={1.5} />
             </Link>
+          )}
+          {specGroups.length > 0 && (
+            <div className="spec-plate">
+              <h2>{t(locale, "specifications")}</h2>
+              {specGroups.map(([key, obj]) => (
+                <dl key={key}>
+                  <div className="spec-group">{t(locale, key)}</div>
+                  {specs(obj)}
+                </dl>
+              ))}
+            </div>
           )}
           <div className="accordions">
             <details open>
               <summary>{t(locale, "piece")}</summary>
               <p>{p.description[locale]}</p>
             </details>
-            {Object.keys(gem).length > 0 && (
-              <details>
-                <summary>{t(locale, "stone")}</summary>
-                {specs(gem)}
-              </details>
-            )}
-            {Object.keys(metal).length > 0 && (
-              <details>
-                <summary>{t(locale, "metal")}</summary>
-                {specs(metal)}
-              </details>
-            )}
-            {Object.keys(measurements).length > 0 && (
-              <details>
-                <summary>{t(locale, "measurements")}</summary>
-                {specs(measurements)}
-              </details>
-            )}
             <details>
               <summary>{t(locale, "delivery")}</summary>
               <p>{t(locale, "journeyBody")}</p>
@@ -700,63 +864,59 @@ export function ProductPage() {
           </div>
         </div>
       </section>
-      <section className="section">
-        <h2>{t(locale, "related")}</h2>
-        <div className="product-grid">
-          {data.products
-            .filter(
-              (x) =>
-                x.id !== p.id &&
-                (x.categoryId === p.categoryId ||
-                  x.collectionIds.some((c) => p.collectionIds.includes(c))),
-            )
-            .slice(0, 4)
-            .map((x) => (
+      {related.length > 0 && (
+        <section className="section vitrine related">
+          <div className="section-head">
+            <h2>{t(locale, "related")}</h2>
+          </div>
+          <div className="product-grid vitrine-row">
+            {related.map((x) => (
               <ProductCard product={x} key={x.id} />
             ))}
-        </div>
-        {data.reviews
-          .filter((r) => r.productId === p.id && r.status === "approved")
-          .map((r) => (
-            <blockquote key={r.id}>
-              <p>{r.text}</p>
-              <div className="review-photos">
-                {r.media.map((src, i) => (
-                  <a href={src} key={src} target="_blank" rel="noreferrer">
-                    <img
-                      src={
-                        src + (src.includes("/media-delivery?") ? "&w=320" : "")
-                      }
-                      alt={`${t(locale, "review")} ${i + 1}`}
-                      width="160"
-                      height="200"
-                      loading="lazy"
-                      style={{ objectFit: "contain" }}
-                    />
-                  </a>
-                ))}
-              </div>
-              {r.rating !== null && (
-                <span aria-label={`${t(locale, "rating")}: ${r.rating}/5`}>
-                  {"★".repeat(r.rating)}
-                </span>
-              )}
-              <cite>{r.name}</cite>
-            </blockquote>
-          ))}
+          </div>
+        </section>
+      )}
+      <section className="section reviews">
+        {reviews.map((r) => (
+          <blockquote key={r.id}>
+            <p>{r.text}</p>
+            <div className="review-photos">
+              {r.media.map((src, i) => (
+                <a href={src} key={src} target="_blank" rel="noreferrer">
+                  <img
+                    src={
+                      src + (src.includes("/media-delivery?") ? "&w=320" : "")
+                    }
+                    alt={`${t(locale, "review")} ${i + 1}`}
+                    width="160"
+                    height="200"
+                    loading="lazy"
+                    style={{ objectFit: "contain" }}
+                  />
+                </a>
+              ))}
+            </div>
+            {r.rating !== null && (
+              <span aria-label={`${t(locale, "rating")}: ${r.rating}/5`}>
+                {"★".repeat(r.rating)}
+              </span>
+            )}
+            <cite>{r.name}</cite>
+          </blockquote>
+        ))}
         <Link className="text-link" to={`/${locale}/review?product=${p.id}`}>
           {t(locale, "review")}
+          <ArrowUpRight size={15} strokeWidth={1.5} />
         </Link>
       </section>
       <div className="sticky-purchase">
-        <span>{variant && <Price amount={variantPrice(p, variant)} />}</span>
-        <button
-          className="button"
-          disabled={
-            !variant || (variant.stock !== null && variant.stock < quantity)
-          }
-          onClick={add}
-        >
+        <span>
+          <small>
+            <Isolate text={p.name[locale]} />
+          </small>
+          {variant && <Price amount={variantPrice(p, variant)} />}
+        </span>
+        <button className="button" disabled={unavailable} onClick={add}>
           {t(locale, "add")}
         </button>
       </div>
@@ -773,32 +933,34 @@ export function ProductPage() {
             ),
           )
           .map((a) => (
-            <div key={a.id}>
+            <div key={a.id} className="guide-table">
               <h3>{a.label[locale]}</h3>
               <ul>
                 {a.values.map((v) => (
                   <li key={v.id}>
-                    {v.label[locale]}
+                    <Isolate text={v.label[locale]} />
                     {v.numericValue !== undefined && (
-                      <bdi> · {formatNumber(v.numericValue, locale)}</bdi>
+                      <bdi>{formatNumber(v.numericValue, locale)}</bdi>
                     )}
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-        <Link
-          className="text-link"
-          to={`/${locale}/journal/${p.categoryId === "rings" ? "ring-size" : p.categoryId === "necklaces" ? "necklace-length" : "bracelet-size"}`}
-        >
-          {t(locale, "education")}
-        </Link>
-        <Link className="button" to={`/${locale}/concierge`}>
-          {t(locale, "concierge")}
-        </Link>
+        <div className="row">
+          <Link
+            className="text-link"
+            to={`/${locale}/journal/${p.categoryId === "rings" ? "ring-size" : p.categoryId === "necklaces" ? "necklace-length" : "bracelet-size"}`}
+          >
+            {t(locale, "education")}
+          </Link>
+          <Link className="button" to={`/${locale}/concierge`}>
+            {t(locale, "concierge")}
+          </Link>
+        </div>
       </Modal>
-      <Modal open={zoom} onClose={() => setZoom(false)} title={p.name[locale]}>
-        {selected && <MediaView media={selected} className="full-image" />}
+      <Modal open={zoom} onClose={() => setZoom(false)} title={p.name[locale]} className="zoom-dialog">
+        {selected && <MediaView media={selected} className="full-image" sizes="100vw" />}
       </Modal>
     </>
   );

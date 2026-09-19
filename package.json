@@ -18,10 +18,12 @@
     "test:edge": "deno check --config supabase/functions/deno.json supabase/functions/store-api/index.ts supabase/functions/notification-worker/index.ts supabase/functions/media-delivery/index.ts supabase/functions/media-cleanup/index.ts supabase/functions/payment-webhook/index.ts supabase/functions/notification-receipt/index.ts"
   },
   "dependencies": {
-    "@fontsource/cormorant-garamond": "^5.3.0",
-    "@fontsource/inter": "^5.3.0",
-    "@fontsource/noto-naskh-arabic": "^5.3.0",
-    "@fontsource/noto-serif-hebrew": "^5.3.0",
+    "@fontsource/amiri": "^5.3.0",
+    "@fontsource/frank-ruhl-libre": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@fontsource/ibm-plex-sans-hebrew": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
     "@supabase/supabase-js": "^2.49.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",

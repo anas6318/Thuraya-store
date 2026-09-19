@@ -611,7 +611,7 @@ export function Content() {
                   {p.title[locale]}
                 </Link>
               </h2>
-              <p>{p.body[locale].slice(0, 180)}</p>
+              <p className="journal-excerpt">{p.body[locale]}</p>
             </article>
           ),
         )}

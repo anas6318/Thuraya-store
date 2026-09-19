@@ -528,3 +528,55 @@ Re-run current typecheck/lint/Edge checks, strengthen upload validation and publ
 - NOT EXECUTED: visual inspection of the *corrected* route on the supplied Vercel URL. That URL currently serves the earlier deployment, so it still renders its native select and prior Arabic font behavior. It must be redeployed from this checkpoint before an honest live corrected-header/hero/PDP review. The exact 390/430/820/1440 matrix remains unexecuted; no Chromium/CDN retry was made.
 - CHANGED: `src/main.tsx`, `src/components/Layout.tsx`, `src/styles/main.css`, `src/styles/storefront.css`, `tests/unit/domain.test.ts`, this recovery log. No backend, Admin, payment, Lab-Grown Diamond, pricing, route, CROWNED or product-data logic changed.
 - Exact next executable task: deploy this checkpoint to the Vercel Preview, then inspect `/ar`, `/ar/product/demo-polaris-necklace` and the header language menu live; continue with only verified visual/RTL/accessibility corrections. **Not production-ready.**
+
+## Customer-facing storefront visual rebuild ("The Horizon") — 2026-09-18 (Opus 5)
+
+Visual-leadership pass on the customer-facing layer only. Built on branch `preview-demo` @ `f118bb4`. CROWNED (`anas6318/NewRepo`) was cloned read-only into a scratch copy, run locally and screenshotted for reference; nothing was pushed to it.
+
+**Browser access is no longer blocked**: this workspace has a working Chromium, so the storefront was rendered and inspected directly (AR/HE/EN × 390/430/820/1440) and the full Playwright suite was executed for the first time.
+
+### Direction
+- Explored: (A) **The Horizon / vitrine** — chosen; (B) "Star atlas" annotated astronomical plates — rejected: tips into a space theme and depends on spec data the catalog does not yet have; (C) "Pleiades cluster" asymmetric seven-point layouts — rejected: hurts scanning and merchandising; (D) "Pearl museum" white-cube gallery with framed photos — rejected: it is the previous failure mode (dark rectangles floating on white) and passes for any jewelry store.
+- Asset finding that drove the design: every supplied THURAYA photograph places the piece on the same reflective line of light at **63 % of frame height** (measured: 62.2–63.7 % across all seven images) with edge colour ≈ `#030518`.
+- **Signature**: that line becomes the site's only ornament. The hero headline rests on it and it runs the full viewport width, brightest under the piece; product windows sit edge-to-edge so their horizons join into one continuous line; the editorial band extends the photograph's line into its copy; the footer opens with it. Hover zooms from the horizon (`transform-origin: 50% 63%`) so pieces rise off the line rather than drifting.
+- Palette: night `#030518`, ink `#0E1633`, sapphire `#3D5BA9`, silver `#A9B3C9`, pearl `#EEF1F6`, paper `#F8F9FB`. Cool pearl, never cream. Dark is used where the photography is: hero, product windows, one editorial band, footer.
+- Type roles: display — Newsreader (Latin), Amiri (Arabic), Frank Ruhl Libre (Hebrew); text/utility — IBM Plex Sans / Plex Sans Arabic / Plex Sans Hebrew (one family drawn for all three scripts). Latin model names in AR/HE are isolated with `<bdi dir="ltr">` and set in the Latin display face.
+- Motion: one orchestrated hero load (horizon draws, copy emerges from the line via clip-path, not opacity) plus a once-only horizon draw when a product strip enters view. The previous generic section fade-up was removed. Reduced motion disables all of it.
+
+### Changes (frontend only)
+- System: `src/styles/storefront.css` rewritten (tokens, type roles, controls, dialogs, responsive). `src/main.tsx` font imports. Transparent logo cut-outs `public/media/thuraya-logo-{ink,ivory}.png` generated from the supplied mark (letterforms unchanged; original JPEGs kept and still used by Admin).
+- Header: two-tier (utility bar + category rail driven by categories that have products), transparent over the home hero, compacts on scroll-down. Language control: word + hairline chevron, 128px floating list, active item marked by ink colour + hairline, arrow-key/Home/End/Escape, focus return, `menu`/`menuitemradio` kept.
+- Home: hero; vitrine strip (horizontal snap strip on phones); category index with counts; numbered approach (a real sequence) with live lead-time; dark editorial band; two-stones journal; monumental ثُرَيّا story block; quiet note blocks. Empty-catalog production home verified.
+- Catalog: category rail, toolbar (search, count, filters with active count, sort), filter drawer with result count.
+- PDP: sticky gallery on desktop with horizon, category crumb, isolated names, segmented variants, "your selection" line, delivery card with lead-time figure, specification plate (only when data exists), chevron accordions, related strip, phone sticky bar with name + price.
+- Commerce/account/content pages restyled; bag contents render only while the drawer is open (fixes duplicate `.cart-line` in the DOM that failed the E2E cart test); search focuses its input and shows thumbnails + active-variant price; journal excerpts clamp instead of cutting mid-word.
+- Copy: new localized strings (all three locales) in `src/i18n.ts`; demo seed defaults for the categories/editorial sections use the new titles. No product facts, prices or specifications invented.
+- Files: `src/{main.tsx,i18n.ts,seed.ts}`, `src/components/{Layout.tsx,ui.tsx,bidi.ts,useStorefrontMotion.ts}`, `src/pages/{Storefront,Commerce,Customer}.tsx`, `src/styles/storefront.css`, `public/media/thuraya-logo-*.png`, `package.json`/lock (font packages swapped), `tests/unit/{domain,bidi}.test.ts`, `tests/e2e/store.spec.ts`.
+- Tests updated, guarantees kept: the Arabic-typeface test now asserts the Amiri/Plex Arabic/Hebrew files; the E2E language test drives the menu instead of the removed `<select>` (it was already stale). New `bidi.test.ts` covers Latin-run isolation.
+
+### Verification
+- Unit **334/334**, DB **56** checks (30 migrations), strict TypeScript, lint, **6** Edge checks, production build (**33** localized pages, no demo products), **38** artifact checks, preview-demo build + verify.
+- **Playwright E2E: 29/29 passed** (first complete execution; run against the local demo server with the workspace Chromium). Includes axe WCAG 2.2 AA on AR/HE/EN home and no-overflow at 390/430/820/1440.
+- Extra axe sweep: 0 violations across home, shop, PDP, cart, checkout, track, journal, about, concierge, FAQ, account × AR/HE/EN × 1440/390.
+- Admin visually re-checked (login, overview, products): unchanged.
+
+### Untouched
+Database/migrations, Edge Functions, RLS, Admin, product/variant contracts, Moissanite + Lab-Grown Diamond model, pricing (`shared/logic.ts` untouched), checkout/order/payment/notification/shipping/promotion/analytics logic, SEO/prerender, Western-digit formatting.
+
+### Remaining visual risks
+- Card and editorial masks fade the lower part of each photograph (softening the repeated THURAYA watermark). This assumes the house photography style; a future photo on a white background would fade into navy — review when real product photography arrives.
+- Only one image per demo product: multi-image gallery, hover alternate image and thumbnail rail are implemented but only lightly exercised.
+- Demo names still carry the "Demo ·" prefix by design; the live look with real names will be cleaner.
+- Not yet seen on the live Vercel URL (this workspace cannot push). Safari/Firefox not tested (Chromium only).
+
+### Next step
+Push this checkpoint to a branch → Vercel Preview → live review on real devices; then hand to Astra6 for regression/security review (no backend surface changed). Higgsfield: not needed for the hero; optional later only for one slow light-sweep in the editorial band, with the still as fallback. **Not production-ready.**
+
+## Final verification after the last CSS tweaks — 2026-09-19
+
+- Context: the previous session's shell became unavailable right after the last storefront CSS tweaks (Arabic eyebrow spacing, Amiri in the Arabic mobile drawer, horizon-draw reveal). The workspace was confirmed intact before this run; nothing was rebuilt or re-designed.
+- PASSED: strict TypeScript, lint, **334/334** unit tests, **56** database integration checks (**30** migrations), **6** Edge checks, preview-demo build (33 pages) + preview-demo artifact verification, production build (33 pages, no demo products), **38** production/SEO artifact checks.
+- PASSED: Playwright **29/29** against the local demo server (workspace Chromium), including axe WCAG 2.2 AA on AR/HE/EN home and no-overflow at 390/430/820/1440.
+- PASSED: extra axe sweep — 0 violations across home, shop, PDP, cart, checkout, track, journal, about, concierge, FAQ, account × AR/HE/EN × 1440/390.
+- CHANGED: this entry only. No source fixes were needed.
+- Next: push branch `storefront-horizon` → Vercel Preview → live device review → Astra6 regression/security pass. **Not production-ready.**

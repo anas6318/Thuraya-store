@@ -119,7 +119,12 @@ export function CartContents({ drawer = false }: { drawer?: boolean }) {
         <Price amount={subtotal} />
       </div>
       <p className="muted">
-        {t(locale, "delivery")}: {t(locale, "checkout")}
+        {t(locale, "made")} ·{" "}
+        <bdi>
+          {formatNumber(data.settings.leadMin, locale)}–
+          {formatNumber(data.settings.leadMax, locale)}
+        </bdi>{" "}
+        {t(locale, "days")}
       </p>
       <Link className="button block" to={`/${locale}/checkout`}>
         {t(locale, "buy")}
