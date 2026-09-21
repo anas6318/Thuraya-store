@@ -580,3 +580,50 @@ Push this checkpoint to a branch → Vercel Preview → live review on real devi
 - PASSED: extra axe sweep — 0 violations across home, shop, PDP, cart, checkout, track, journal, about, concierge, FAQ, account × AR/HE/EN × 1440/390.
 - CHANGED: this entry only. No source fixes were needed.
 - Next: push branch `storefront-horizon` → Vercel Preview → live device review → Astra6 regression/security pass. **Not production-ready.**
+
+## Approved ecommerce product media — pilot integration (4 products / 8 images) — 2026-09-21
+
+Pilot only. No catalog migration, no redesign, no backend/Admin/schema/pricing/variant/security/localization/checkout change.
+
+### The approved media system
+- Supplied and integrated: **8 final images, 4 products, 2 frames per product** — a midnight ("blue") frame and a pearl ("white") frame. All are **1122×1402, exactly 4:5**, no text, no mark inside the image, product-first, no campaign composition.
+- Pairs (mapped by visual match, confirmed identical framing per pair): tennis bracelet → `tennis-bracelet-{blue,white}`; Polaris halo necklace → `polaris-necklace-{blue,white}`; solitaire studs → `essential-studs-{blue,white}`; pear solitaire rings → `vega-rings-{blue,white}`.
+- These supersede the older Instagram/social-post artwork **as the ecommerce product-image standard**. The old assets still serve the hero, the editorial band and the empty-catalog state; they are not used as product media for the pilot pieces.
+- Files added to `public/media/` as JPEG masters plus the existing responsive pipeline output (`scripts/optimize-media.ts` → 320/640/1080 webp). Nothing in the secure media backend, reference protection or deletion architecture changed.
+
+### Roles (`shared/media-roles.ts`, new, presentation only)
+- **Browsing** (home strip, catalog, search): midnight frame is the default; the pearl frame is the hover reveal. **Product page**: pearl frame is the main gallery image, midnight frame second.
+- The pair is recognised by file name (`-blue` / `-white`). Media that does not follow the convention keeps the stored order, so the rest of the catalog and any future upload behave exactly as before. Unit-tested in `tests/unit/media-roles.test.ts` (4 cases).
+- Cart, checkout summary and search thumbnails inherit the pearl frame (media order is white-first), which reads cleanly on the pale commerce surfaces.
+
+### Horizon media treatments removed (they were built for the old artwork)
+- Removed: the lower-image fade/mask on product cards, the 1.12 crop-zoom with its 63% origin, the legacy hover zoom (a leftover `scale(1.018)` in `main.css` is now explicitly neutralised), the drawn horizon line inside product cards, the PDP gallery's 1.06 zoom and its drawn line, and the zoom on search thumbnails.
+- Backgrounds behind product media changed from midnight to pearl on the PDP gallery, thumbnails, cart, summary and search thumbs, so a white frame never loads over a navy box.
+- Product windows now have a small gutter (10–16px) instead of touching: the approved frames each carry their own vignette, so a zero-gutter row read as a patchwork rather than one stage.
+- Kept: the Horizon signature where the photography still supports it — the hero, the dark editorial band (its horizon reveal motion now targets only that band) and the footer rule. The old-artwork empty-catalog pair keeps its fade, since that imagery still carries the mark.
+- Hover: a single crossfade between the two frames, `.55s`, no zoom, no controls. Measured: card box identical before/after (317.5×396.9), image `transform: none`, alternate frame same box. Card overlay controls (saved-piece heart, demo badge) switch to ink while the pearl frame is shown so they stay legible.
+- Touch/mobile: the alternate frame is only revealed under `@media(hover:hover)`; phones and tablets keep the midnight frame and reach the pearl frame through the normal PDP gallery.
+
+### Find your piece
+- The homepage category directory was removed (section, styles and its localized string). Header rail, footer and the catalog's own category rail already carry that navigation at this catalog size. No replacement section was added; the homepage now runs vitrine → approach → editorial, which reads continuously at every width.
+
+### Live visual QA
+- Home, catalog and PDP inspected at **390 / 430 / 820 / 1440 × EN / AR / HE**; no horizontal overflow anywhere.
+- Card consistency across geometries: wide bracelet, vertical necklace, compact studs and rings each fill their frame naturally at 4:5 with identical container behaviour, consistent margins, no clipping, no distortion, no forced equal scale.
+- PDP: pearl frame first, midnight frame as the second thumbnail, correct order mirrored in RTL; phone gallery is full-bleed with both frames reachable.
+- Responsive media preserved: `-640.webp` served to a 317px card, intrinsic `1122×1402` on every image, lazy loading kept, localized alt text on all eight frames. Measured CLS after load: **0.032**.
+
+### Verification
+- TypeScript, lint, **337/337** unit tests, **56** DB checks (30 migrations), **6** Edge checks, preview-demo build + artifact verification, production build (33 pages, no demo products), **38** production/SEO artifact checks.
+- **Playwright 29/29**, axe **0 violations** across home, shop, PDP, cart, checkout, track, journal, about, concierge, FAQ, account × AR/HE/EN × 1440/390.
+- Fixture note: the demo studs product is now labelled "Essential studs" to match the approved photograph (the old fixture name described a different cut). The two search tests were re-pointed at the new name and still assert typo-tolerant matching and the zero state.
+
+### Remaining visual risks
+- The pearl frames are slightly warm; the UI pearl is cool. They sit side by side on the PDP and in the bag without clashing, but a warmer neutral surface is worth considering if the whole catalog moves to this standard.
+- Both frames are fetched for cards in view (≈7–12KB extra per card on phones, where hover never fires). Acceptable for smooth hover; revisit if the catalog grows large.
+- The blue frames differ slightly in vignette depth between pieces (studs darkest, necklace brightest). The new gutters absorb it; worth holding the lighting constant when the remaining products are shot.
+- The hero, editorial band and empty-catalog pair still use the old social artwork. They are not product media, but they will look increasingly different from the new standard.
+- Not yet seen on the live Vercel Preview (this session cannot push).
+
+### Next step
+Deploy this checkpoint to the Preview, judge the four pilot products live on real devices, then either lock this product-media standard and generate the remaining catalog images to match, or make one adjustment first. **Not production-ready.**

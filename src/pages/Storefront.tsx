@@ -22,6 +22,7 @@ import { initialMedia } from "../seed";
 import { MediaView, ProductCard, Empty, Modal, Price, Isolate, Glint } from "../components/ui";
 import { formatNumber, variantPrice } from "../../shared/logic";
 import { shopProducts, sectionProducts } from "../../shared/catalog-selection";
+import { galleryMedia } from "../../shared/media-roles";
 import { rememberHistory } from "../../shared/local-history";
 export function Home() {
   const { data, locale } = useStore();
@@ -32,9 +33,6 @@ export function Home() {
       {formatNumber(data.settings.leadMax, locale)}
     </bdi>
   );
-  const categories = data.categories
-    .filter((c) => c.active && data.products.some((p) => p.categoryId === c.id))
-    .sort((a, b) => a.position - b.position);
   return (
     <>
       {data.sections
@@ -186,45 +184,9 @@ export function Home() {
                 </div>
               </section>
             );
-          if (s.kind === "categories" && !categories.length) return null;
-          if (s.kind === "categories")
-            return (
-              <section
-                data-layout={s.layout}
-                key={s.id}
-                className="category-index section"
-              >
-                <div className="section-head">
-                  <h2>{s.title[locale]}</h2>
-                </div>
-                <ul>
-                  {categories.map((c) => {
-                    const pieces = data.products.filter(
-                      (p) => p.categoryId === c.id,
-                    );
-                    const cover = pieces[0]?.media[0];
-                    return (
-                      <li key={c.id}>
-                        <Link to={`/${locale}/shop?category=${c.id}`}>
-                          <span className="category-thumb" aria-hidden="true">
-                            {cover && <MediaView media={cover} sizes="120px" />}
-                          </span>
-                          <span className="category-name">{c.name[locale]}</span>
-                          <span className="category-count">
-                            <bdi>{formatNumber(pieces.length, locale)}</bdi>
-                          </span>
-                          <ArrowUpRight
-                            className="category-arrow"
-                            size={20}
-                            strokeWidth={1.2}
-                          />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
+          // The category directory was removed from the homepage: header, footer
+          // and catalog rail already carry category navigation at this catalog size.
+          if (s.kind === "categories") return null;
           if (s.kind === "standard")
             return (
               <section
@@ -614,8 +576,10 @@ export function ProductPage() {
         (a) => v.options[a.id] === (options[a.id] || a.values[0]?.id),
       ),
   );
-  const media = p.media.filter(
-    (m) => !variant?.mediaIds.length || variant.mediaIds.includes(m.id),
+  const media = galleryMedia(
+    p.media.filter(
+      (m) => !variant?.mediaIds.length || variant.mediaIds.includes(m.id),
+    ),
   );
   const selected = media[index] || media[0];
   const gem = { ...p.gem, ...variant?.gem };
@@ -695,7 +659,6 @@ export function ProductPage() {
         <div className="gallery" aria-label={t(locale, "gallery")}>
           <div className="gallery-main">
             {selected && <MediaView key={selected.id} media={selected} eager sizes="(max-width:820px) 100vw, 56vw" />}
-            <span className="horizon" aria-hidden="true" />
             <button
               className="icon zoom"
               aria-label={t(locale, "zoom")}

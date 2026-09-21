@@ -341,7 +341,6 @@ export const words = {
   continue: L("Continue exploring", "تابع الاستكشاف", "להמשיך לגלות"),
   // Storefront visual system (2026-09 redesign)
   vitrine: L("In the vitrine", "في الواجهة", "בוויטרינה"),
-  byPiece: L("Find your piece", "اختر قطعتك", "מצאו את התכשיט שלכם"),
   deliveryIsrael: L("Delivery across Israel", "توصيل في أنحاء إسرائيل", "משלוח לכל הארץ"),
   preparedIn: L("Prepared in", "تُجهّز خلال", "מוכן תוך"),
   personalConcierge: L("A personal concierge", "مساعدة شخصية لكل قطعة", "ייעוץ אישי לכל תכשיט"),

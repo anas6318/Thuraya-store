@@ -36,7 +36,7 @@ test('tracking HMAC stable and contact-specific',async()=>{const s='a'.repeat(32
 test('weak tracking secret rejected',async()=>assert.rejects(contactHash('x','short')));
 test('constant time equality detects length/content mismatch',()=>{assert.equal(constantTimeEqual('abc','abc'),true);assert.equal(constantTimeEqual('abc','abcd'),false);assert.equal(constantTimeEqual('abc','abd'),false)});
 for(const l of ['ar','he','en'] as const)test(`locale ${l} preserves product URL`,()=>assert.equal(localePath('/en/product/polaris?x=1',l),`/${l}/product/polaris?x=1`));
-test('typo tolerant search',()=>assert.equal(searchMatch(p,'Zenit'),true));
+test('typo tolerant search',()=>assert.equal(searchMatch(p,'Esential'),true));
 test('localized Hebrew search',()=>assert.equal(searchMatch(p,'עגילי'),true));
 test('delivery window uses configured days',()=>assert.equal(deliveryRange(10,14,new Date('2026-01-01'))[1].toISOString().slice(0,10),'2026-01-15'));
 test('invalid lead range rejected',()=>assert.throws(()=>deliveryRange(14,10)));

@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {browseMedia,galleryMedia} from '../../shared/media-roles.ts';
+import {localized as L,type Media} from '../../shared/domain.ts';
+const image=(id:string,src:string):Media=>({id,src,alt:L('','',''),kind:'image',width:1122,height:1402,position:0,mime:'image/jpeg'});
+const white=image('w','/media/tennis-bracelet-white.jpeg');
+const blue=image('b','/media/tennis-bracelet-blue.jpeg');
+const legacy=image('l','/media/01-Zenith-studs.jpeg');
+test('browsing shows the midnight frame first and the pearl frame as the hover reveal',()=>{const {primary,alternate}=browseMedia([white,blue]);assert.equal(primary,blue);assert.equal(alternate,white)});
+test('the product gallery inspects the pearl frame first and the midnight frame second',()=>{assert.deepEqual(galleryMedia([blue,white]),[white,blue])});
+test('media without the approved pair keeps its stored order',()=>{const {primary,alternate}=browseMedia([legacy,white]);assert.equal(primary,legacy);assert.equal(alternate,white);assert.deepEqual(galleryMedia([legacy]),[legacy])});
+test('extra images stay after the approved pair',()=>{const detail=image('d','/media/tennis-bracelet-detail.jpeg');assert.deepEqual(galleryMedia([detail,blue,white]),[white,blue,detail])});
