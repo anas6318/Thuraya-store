@@ -662,6 +662,8 @@ Upload the approved blue tennis-bracelet frame through the widget, generate the 
 
 ## 2026-09-22 — Editorial light loop integrated (Higgsfield, one asset, one location)
 
+> **Superseded.** The clip described below was rejected on product fidelity and backed out (`5f63e34`). See the final entry at the end of this file. The engineering notes here still describe the shipped wiring.
+
 The generated loop was reviewed and approved by the owner. It is now wired into the dark editorial band on the homepage, layered over the approved photograph rather than replacing it.
 
 ### The asset
@@ -693,3 +695,48 @@ Arabic and Hebrew homepages carry a **CLS of ~0.88** at 1440. It is a single shi
 
 ### Next step
 Review the loop on the live Preview at desktop width in all three locales, then take the Arabic/Hebrew hero webfont reflow as its own pass. **Not production-ready.**
+
+---
+
+## 2026-09-22 — Editorial light loop, second generation: approved and shipped
+
+The first clip was rejected by the owner on product fidelity and reverted in full (`5f63e34`). A second generation was made under a hard constraint and approved. This entry is the record of record.
+
+### Why the first clip failed
+Not framing and not the light — the bracelet itself would not hold still. Measured over the clasp and safety-latch region, the pixel delta against frame 0 climbed to a **99th percentile of 192/255**, and the whole-bracelet edge correlation at the best integer shift fell from 1.00 to **0.07** with up to **18 px** of drift. The clasp geometry, the two open ends and the curvature were all being interpolated. A photograph of a piece that morphs is not a photograph of that piece.
+
+### What changed in the second generation
+The same approved midnight frame was pinned as **both `start_image` and `end_image`**, and the prompt named the frozen parts explicitly — body, stones, prongs, settings, clasp, safety latch, metal, curvature, position, perspective, scale — with illumination as the only permitted change, and no camera motion of any kind.
+
+Measured with the same code on both clips:
+
+| | rejected | approved |
+|---|---|---|
+| Clasp region, pixel delta vs frame 0 (p99) | rises to 192/255 | **7–9/255** throughout |
+| Whole bracelet, edge correlation at best shift | falls to 0.07, drift to 18 px | **0.84–0.93**, shift **(0,0)** at every frame |
+| Last frame vs first frame | 11.0/255 | **0.44/255** |
+| Frame 0 vs the approved still | 2.09/255 | **2.08/255** |
+
+The residual in the edge correlation is specular highlight moving across faceted stones — the intended effect — not displacement: a two-pixel shift of that white-on-blue edge would read in the hundreds, and the largest delta anywhere in the clasp region is 28.
+
+Two consequences worth recording: the clip came back **1288×1608 (4:5)**, matching the band's frame with no re-crop, and because the end frame is pinned it **loops natively at 0.44/255** — the ping-pong construction the first clip needed is gone, so the asset is 5 seconds rather than 10.
+
+### The shipped asset
+Scaled to 1080×1350, silent, 24fps, 121 frames: **`tennis-bracelet-blue-loop.webm`** (VP9, 331 KB) offered first, **`tennis-bracelet-blue-loop.mp4`** (H.264, 458 KB) universal. Roughly a third of the first attempt's weight.
+
+### The wiring (unchanged from the backed-out pass)
+- `src/components/EditorialLoop.tsx`: the photograph is the asset, the loop a second layer in the same box wearing the **same masks** (bottom fade 66–79%, inline-end fade 80%, mirrored in RTL).
+- Gated on `(min-width:1024px) and (hover:hover) and (pointer:fine)` **and** not `prefers-reduced-motion: reduce`; the component returns `null` otherwise, so phones, tablets, touch laptops and reduced-motion visitors get **no video element at all**. A CSS media query repeats the gate as a backstop.
+- `muted`, `loop`, `playsinline`, `preload="none"`, no controls, `aria-hidden`, `tabIndex=-1`, `disablePictureInPicture`. Sources attach only when an IntersectionObserver reports the band within 160px of the viewport; playback pauses when it leaves. Nothing is fetched before that; no LCP exposure.
+- Fades in over 0.9s only once `play()` resolves. A refused, slow or unsupported load leaves the photograph in place with no visible event.
+- **One light event per band**: where the loop plays it supersedes the one-shot horizon sweep. Everywhere it does not play, the native sweep still runs.
+- Scoped to the editorial band alone, keyed to that one still. Product cards, catalog, PDP, hero and every other section are untouched.
+- No schema change: the band resolves its still through `siteMedia`, so `content_sections` still stores a path.
+
+### Verification
+TypeScript, lint, **341/341** unit, **56** DB checks (30 migrations), **6** Edge checks, production build (33 pages, no demo products), **38** artifact checks, **Playwright 29/29**, axe **0 violations** across 2 viewports × 3 locales × 11 routes.
+
+Live at 1440 / 1280 / 820 / 430 / 390 in EN, AR and HE: video present and playing only at 1440 and 1280 non-touch; absent at 820, 430, 390 and under reduced motion with **zero** media requests; video bounding box **identical to the photograph's** at every width and in both directions; CLS contributed by the loop **none** (EN 1440: 0.0085 with the loop playing); RTL mirrors mask and sweep direction.
+
+### Still outstanding
+The Arabic and Hebrew hero webfont reflow (**CLS ≈ 0.88** at ~570ms, present with the loop absent and under reduced motion; English 0.0085). Unrelated to this pass and untouched by it. **Not production-ready.**
