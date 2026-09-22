@@ -627,3 +627,33 @@ Pilot only. No catalog migration, no redesign, no backend/Admin/schema/pricing/v
 
 ### Next step
 Deploy this checkpoint to the Preview, judge the four pilot products live on real devices, then either lock this product-media standard and generate the remaining catalog images to match, or make one adjustment first. **Not production-ready.**
+
+## Motion and transition pass — native first — 2026-09-22
+
+Targeted enhancement pass on the finished Horizon storefront with the product-media pilot in place. No redesign; no backend, Admin, schema, product, pricing, checkout, security or localization change.
+
+### Visual audit (live, 1440 and 390, EN/AR/HE)
+- Hero: strong as a still composition, already orchestrated on load (horizon draws, copy emerges from the line, image settles). Verdict: no generated motion here — it would compete with the headline and put video in front of LCP.
+- Light → dark band edges (approach → editorial, notes → footer) were hard cuts: two flat colours meeting on a straight line.
+- The editorial band was ~880px tall with roughly a third of it empty sky above the bracelet, so it read as a large dark hole rather than a composed frame.
+- Scroll progression below the hero was inert: apart from the editorial line draw, nothing in the page acknowledged arriving.
+- The story block's ثُرَيّا was pale and static — the identity moment of the page behaving like a watermark.
+- Product cards, catalog grid and PDP: deliberately left alone. They carry the hover crossfade from the media pilot and do not need entrance motion.
+
+### Native changes
+- **Dusk seams.** Dark bands open and close with a short vertical gradient instead of a cut edge (`.editorial::before/::after`, `.footer::after`), echoing how the photography falls from light into night. Not a decorative separator — a surface-tone transition.
+- **Editorial band tightened** to `clamp(560px,72vh,760px)`, bringing the piece and the copy into one composition.
+- **One cinematic native moment**: after the editorial horizon line draws, a single slow glance of light travels along it (3.4s, one-shot, direction-aware for RTL). Replaces the plain line draw rather than adding a second effect.
+- **The name lights once**: the story block's ثُرَيّا resolves with a highlight crossing the letterforms (4.2s, one-shot, `background-clip:text`). Fixed a real bug this exposed — the glyphs' upper marks were being clipped by the background box; corrected with line-height and block padding. Guarded by `@supports`, so unsupported browsers keep solid colour. Centred on phones.
+- Scroll observer now covers the editorial band, the legacy pair and the story block; every effect is one-shot, nothing loops, nothing repeats per card or per section.
+
+### Verification
+TypeScript, lint, **337/337** unit, **56** DB checks (30 migrations), **6** Edge checks, production build (33 pages, no demo products), **38** artifact checks, **Playwright 29/29**, axe **0 violations**. Reduced motion measured directly: `document.getAnimations()` returns **none** under `prefers-reduced-motion: reduce`. No horizontal overflow at 390/430/820/1440 in EN/AR/HE; RTL mirrors the sweep direction.
+
+### Higgsfield decision
+One asset, one location: the **dark editorial band**. Approved by the owner with explicit constraints — 5s, silent, no camera movement, no zoom, no geometry change, no added stones, no text or logo, only a controlled light sweep across the existing facets, generated from the approved tennis-bracelet blue frame as the start image.
+- Integration plan (not yet applied): the still remains the `poster` and the sole markup for reduced motion; video is muted, `playsinline`, looped, `preload="none"`, lazy, desktop-only, same 4:5 box and masks, so there is no layout shift and no LCP exposure. The static asset is **not** replaced permanently until the generated loop is reviewed in the live Preview.
+- BLOCKED: generation is waiting on the source image reaching Higgsfield. This sandbox's egress proxy refuses the presigned S3 upload, so the file has to come through the Higgsfield upload widget on the owner's side. Nothing was generated.
+
+### Next step
+Upload the approved blue tennis-bracelet frame through the widget, generate the single 5s loop, inspect its frames for product fidelity (stone count, clasp, metal, proportions) before wiring it in, then review it on the Preview against the native-only version and keep whichever is stronger. **Not production-ready.**
