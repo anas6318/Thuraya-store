@@ -245,8 +245,12 @@ html[lang=ar] .storefront .standard-grid h3{line-height:1.6}
 .storefront .editorial::after{content:'';display:block;position:absolute;inset-inline:0;bottom:0;height:clamp(70px,10vh,130px);background:linear-gradient(to top,rgba(150,170,220,.10),transparent);pointer-events:none;z-index:1}
 .editorial-image{position:relative;aspect-ratio:4/5;max-height:clamp(560px,72vh,760px);width:100%;justify-self:start;background:none}
 .editorial-image picture{display:block;height:100%}
-.storefront .editorial-image img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;-webkit-mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(90deg,#000 0 80%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(90deg,#000 0 80%,transparent);mask-composite:intersect}
-[dir=rtl] .storefront .editorial-image img{-webkit-mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(270deg,#000 0 80%,transparent);mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(270deg,#000 0 80%,transparent)}
+.storefront .editorial-image img,.storefront .editorial-image .editorial-loop{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;-webkit-mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(90deg,#000 0 80%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(90deg,#000 0 80%,transparent);mask-composite:intersect}
+[dir=rtl] .storefront .editorial-image img,[dir=rtl] .storefront .editorial-image .editorial-loop{-webkit-mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(270deg,#000 0 80%,transparent);mask-image:linear-gradient(to bottom,#000 0 66%,transparent 79%),linear-gradient(270deg,#000 0 80%,transparent)}
+/* The loop sits on the photograph, not in place of it: same box, same mask, faded in only once it is actually playing. */
+.editorial-image .editorial-loop{position:absolute;inset:0;z-index:0;opacity:0;pointer-events:none;transition:opacity .9s var(--ease)}
+.editorial-image .editorial-loop.is-playing{opacity:1}
+@media(max-width:1023px),(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){.editorial-image .editorial-loop{display:none}}
 .editorial-image .horizon{inset-inline-end:-60vw;background:linear-gradient(90deg,rgba(200,214,250,.12),rgba(226,234,255,.8) 30%,rgba(200,214,250,.1) 80%,transparent)}
 [dir=rtl] .editorial-image .horizon{background:linear-gradient(270deg,rgba(200,214,250,.12),rgba(226,234,255,.8) 30%,rgba(200,214,250,.1) 80%,transparent)}
 .storefront .editorial-copy{position:relative;z-index:2;display:grid;grid-template-rows:var(--horizon) 1fr;padding:0 var(--gutter) 0 clamp(24px,4vw,64px);max-width:640px;align-items:stretch;justify-content:stretch}
@@ -620,6 +624,7 @@ html[lang=ar] .footer-brand p{line-height:1.8}
 .editorial .horizon::after{content:'';position:absolute;inset-block:-1px;width:38%;background:linear-gradient(90deg,transparent,rgba(233,240,255,.85),transparent);opacity:0;filter:blur(.4px)}
 .editorial.is-lit .horizon::after{animation:horizon-sweep 3.4s 1.1s cubic-bezier(.33,0,.2,1) both}
 [dir=rtl] .editorial.is-lit .horizon::after{animation-name:horizon-sweep-rtl}
+.editorial-image:has(.editorial-loop.is-playing) .horizon::after{animation:none}
 @keyframes horizon-sweep{0%{inset-inline-start:-40%;opacity:0}18%{opacity:.85}82%{opacity:.55}100%{inset-inline-start:102%;opacity:0}}
 @keyframes horizon-sweep-rtl{0%{inset-inline-end:-40%;opacity:0}18%{opacity:.85}82%{opacity:.55}100%{inset-inline-end:102%;opacity:0}}
 @media(prefers-reduced-motion:reduce){.will-light .horizon{transform:none;opacity:1}}

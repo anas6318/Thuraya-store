@@ -657,3 +657,39 @@ One asset, one location: the **dark editorial band**. Approved by the owner with
 
 ### Next step
 Upload the approved blue tennis-bracelet frame through the widget, generate the single 5s loop, inspect its frames for product fidelity (stone count, clasp, metal, proportions) before wiring it in, then review it on the Preview against the native-only version and keep whichever is stronger. **Not production-ready.**
+
+---
+
+## 2026-09-22 — Editorial light loop integrated (Higgsfield, one asset, one location)
+
+The generated loop was reviewed and approved by the owner. It is now wired into the dark editorial band on the homepage, layered over the approved photograph rather than replacing it.
+
+### The asset
+- Source: kling3_0, 5s, silent, static camera, generated from the approved midnight tennis-bracelet frame as start image. Job `6a898b7d…`, delivered at 1288×1608 (4:5, **matching the still exactly** — no re-crop, no mismatch against the band's 4:5 box).
+- Product fidelity checked frame by frame before wiring: stone count, prongs, clasp, metal and curvature are identical across the clip; only the backdrop light moves.
+- Loop seam: the raw clip's last frame differs from its first by **11.0/255** — a visible cut on every repeat. Fixed by building a **ping-pong** loop (forward, then reversed, duplicate frames dropped): 10s, seam now **0.7/255**, invisible. The light drifts across the facets and drifts back.
+- Encoded twice, scaled to 1080×1350: **`tennis-bracelet-blue-loop.webm`** (VP9, 804 KB) offered first, **`tennis-bracelet-blue-loop.mp4`** (H.264, 1.06 MB) as the universal fallback. Frame 0 differs from the approved still by **2.1/255**, so the handoff from poster to video is not perceptible.
+
+### How it is wired
+- `src/components/EditorialLoop.tsx` — new. The photograph is the asset; the loop is a second layer on top of the same box with the **same masks** (bottom fade at 66–79%, inline-end fade at 80%, mirrored in RTL), so it dissolves into the night exactly as the photograph does.
+- Gated on `(min-width:1024px) and (hover:hover) and (pointer:fine)` **and** `not (prefers-reduced-motion: reduce)`; the component returns `null` otherwise, so phones, tablets, touch laptops and reduced-motion visitors get **no video element at all** — not a hidden one. A CSS media query repeats the gate as a backstop.
+- `muted`, `loop`, `playsinline`, `preload="none"`, no controls, `aria-hidden`, `tabIndex=-1`, `disablePictureInPicture`. Sources are attached only when an IntersectionObserver reports the band within 160px of the viewport; playback pauses when it leaves. Nothing is fetched before that, and nothing competes with LCP.
+- Fades in over 0.9s only once `play()` has actually resolved. A refused, slow or unsupported load leaves the photograph in place with no visible event.
+- **One light event per band**: where the loop plays it supersedes the one-shot horizon sweep (`:has(.editorial-loop.is-playing)`). Where it does not play — every small screen, every reduced-motion visitor — the native sweep still runs.
+- The editorial band now resolves its still through `siteMedia` (media library + approved product frames) so it keeps real intrinsic dimensions (1122×1402) and trilingual alt text. **No schema change**: `Section.imageMedia` is a client-side field with no `content_sections` column, so the section stores a path exactly as before. (The first attempt did persist `imageMedia` and the DB checks caught it — the fix was resolution, not a migration.)
+- Prerendered output ships the photograph only; no video element reaches the 33 static pages.
+
+### Verification
+TypeScript, lint, **341/341** unit (4 new), **56** DB checks (30 migrations), **6** Edge checks, production build (33 pages, no demo products), **38** artifact checks, **Playwright 29/29**, axe **0 violations** across 2 viewports × 3 locales × 11 routes.
+
+Measured live at 1440 / 1280 / 820 / 430 / 390 in EN, AR and HE:
+- Video present and playing only at 1440 and 1280 non-touch; **absent** at 820, 430, 390 and under `prefers-reduced-motion`, with **zero** media requests on those runs.
+- Video bounding box **identical to the photograph's** at every width and in both directions (e.g. AR 1440: `[670,126,770,648]` for both).
+- Layout shift contributed by the loop: **none** (EN 1440 CLS 0.0085 with the loop playing).
+- RTL mirrors the mask and the sweep direction (`horizon-sweep-rtl`).
+
+### Defect found, not introduced, not fixed here
+Arabic and Hebrew homepages carry a **CLS of ~0.88** at 1440. It is a single shift at ~570ms in the hero, sourced to the headline text, and it occurs with the loop absent and under reduced motion — the Arabic/Hebrew **display webfont swapping in and reflowing the hero**. English is 0.0085. This is almost certainly the same root cause as the reported "Arabic hero headline huge and clipped". The fix is font-metric alignment on the AR/HE display faces (`size-adjust`/`ascent-override` fallback metrics, or `font-display: optional`), not a change to this pass.
+
+### Next step
+Review the loop on the live Preview at desktop width in all three locales, then take the Arabic/Hebrew hero webfont reflow as its own pass. **Not production-ready.**
