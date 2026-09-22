@@ -16,13 +16,9 @@ import {
   Search,
   ChevronDown,
 } from "lucide-react";
-import {
-  EditorialLoop,
-  editorialLoop,
-} from "../components/EditorialLoop";
 import { useStore } from "../store";
 import { t } from "../i18n";
-import { initialMedia, siteMedia } from "../seed";
+import { initialMedia } from "../seed";
 import { MediaView, ProductCard, Empty, Modal, Price, Isolate, Glint } from "../components/ui";
 import { formatNumber, variantPrice } from "../../shared/logic";
 import { shopProducts, sectionProducts } from "../../shared/catalog-selection";
@@ -223,22 +219,20 @@ export function Home() {
                 </ol>
               </section>
             );
-          if (s.kind === "editorial") {
-            const still =
-              s.imageMedia ||
-              siteMedia.find((m) => m.src === s.image) || {
-                ...initialMedia[5],
-                src: s.image,
-              };
-            const loop = editorialLoop(still.src);
+          if (s.kind === "editorial")
             return (
               <section data-layout={s.layout} key={s.id} className="editorial">
                 <div className="editorial-image">
                   <MediaView
-                    media={still}
+                    media={
+                      s.imageMedia ||
+                      initialMedia.find((m) => m.src === s.image) || {
+                        ...initialMedia[5],
+                        src: s.image,
+                      }
+                    }
                     sizes="(max-width:820px) 100vw, 55vw"
                   />
-                  {loop && <EditorialLoop src={loop} />}
                   <span className="horizon" aria-hidden="true" />
                 </div>
                 <div className="editorial-copy">
@@ -253,7 +247,6 @@ export function Home() {
                 </div>
               </section>
             );
-          }
           if (s.kind === "story")
             return (
               <section
