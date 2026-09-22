@@ -740,3 +740,57 @@ Live at 1440 / 1280 / 820 / 430 / 390 in EN, AR and HE: video present and playin
 
 ### Still outstanding
 The Arabic and Hebrew hero webfont reflow (**CLS ≈ 0.88** at ~570ms, present with the loop absent and under reduced motion; English 0.0085). Unrelated to this pass and untouched by it. **Not production-ready.**
+
+---
+
+## 2026-09-22 — Arabic/Hebrew layout shift: root cause was direction, not the webfont
+
+Targeted QA pass. The editorial light loop is locked and untouched.
+
+### Correction to the earlier report
+The CLS ≈ 0.88 I reported on the Arabic and Hebrew homepages was measured against the dev server and `vite preview`, both of which answer `/ar` with the **LTR SPA shell** instead of the prerendered page. Measured against the built output served the way Vercel serves it (directory index first, shell only for the routes `vercel.json` rewrites), the prerendered pages were already **CLS 0.00** in all three locales at all five widths.
+
+The defect is real, but it is not on the prerendered pages and it is not the font swap. It is on **every route that is rewritten to the SPA shell** — cart, checkout, account, order, tracking, wishlist, review, concierge, admin. Baseline there, nine runs per locale at 1440:
+
+| | median | max |
+|---|---|---|
+| Arabic | **0.8562** | 0.8601 |
+| Hebrew | **0.8515** | 0.8568 |
+| English | 0.0011 | 0.0016 |
+
+### 1. Root cause
+`<html dir>` and `<html lang>` were applied from a React effect in `src/store.tsx`. The SPA shell ships `lang="en" dir="ltr"`, so an Arabic or Hebrew visitor on any of those routes got an **LTR first paint** that flipped to RTL once React resolved the route. Traced frame by frame on `/ar`: at 174 ms `document.documentElement.dir` is `ltr` and `.header-tools` sits at x = 784; at 260 ms `dir` is `rtl` and the same 603 px block is at x = 53. A **731 px horizontal jump** — a distance fraction of 0.51 across effectively the whole viewport — which is the whole of the 0.85.
+
+English was unaffected because the shell's direction was already correct for it. Hebrew measured 0.00 in some runs and 0.85 in others: the flip is a race against first paint, not a stable difference.
+
+The display webfont swap is a genuine but *minor* second-order effect. The hero cannot change height when it swaps — the hero's own height is clamped and `--display-leading` is a unitless multiplier, so the line box is font-independent — which is why the measured contribution is in the thousandths, not the tenths.
+
+### 2. Implementation
+**`src/document-locale.ts` (new).** `localeFromPath()` reads the locale from the first path segment; `applyDocumentLocale()` sets `lang` and `dir` on `<html>`, writing only on an actual change. `src/main.tsx` calls it **before `createRoot().render()`**, so direction is settled before anything is drawn; the store now calls the same helper on locale change, and its `localStorage` write is wrapped so private-mode browsing cannot throw past it. No inline script — the CSP is `script-src 'self'` with no `unsafe-inline`, and none was needed.
+
+**`shared/fonts.ts` (new) + prerender.** Each locale declares exactly two critical faces — the display face that sets the headline and the text face that sets everything else — and the prerender resolves them to their hashed build artifacts and emits `<link rel="preload" as="font" type="font/woff2" crossorigin>` in that page's head. These are already-declared self-hosted faces, so this adds no request; it starts the one that was going to happen anyway before the stylesheet has been parsed. A font-package rename now **throws during the build** rather than silently dropping the hint.
+
+Nothing else changed: no new fixed heights, no animation covering a shift, no `font-display` override, no metric-override or system-font substitution, no change to the type stacks, the RTL rules, the Arabic digit formatting, or the hero design. English changed only in that it gets the same two preloads.
+
+### 3. CLS before vs after
+Prerendered home pages were 0.00 before and stay 0.00 after, at 390 / 430 / 820 / 1280 / 1440 in all three locales, on first load, on repeat load, and under reduced motion. The change is on the shell-served routes (`/cart`, `/checkout`, `/track`, nine runs each per locale at 1440):
+
+| locale | before (median) | after (median) | after (max) |
+|---|---|---|---|
+| Arabic | 0.8562 | **0.0046** | 0.0082 |
+| Hebrew | 0.8515 | **0.0008** | 0.0059 |
+| English | 0.0011 | 0.0011 | 0.0016 |
+
+At 390 and 430 the figure was 0.0000 before and after — the compact header has no wide tools block to flip.
+
+### 4. Font-loading trade-offs
+- `font-display: swap` is kept on all fifteen faces. Text is never invisible; verified under a 2.5 s font stall, where the headline is drawn in all three locales. `optional` and `block` were both rejected: the first would show a system fallback for a whole page view on a slow connection, the second is a FOIT.
+- Two faces preloaded per locale, never six. Heavier weights, the italic and the other languages' faces are not above the fold and are left to the stylesheet.
+- The SPA shell carries **no** preloads, because it is one file that serves all three locales and cannot know which is coming. That is the source of the residual 0.0046 on `/ar/cart`: announcement text, the heading and the CTA settling by 2–18 px as Amiri and IBM Plex Sans Arabic arrive. It sits at about 5% of the 0.1 "good" budget. Closing it would mean a per-locale shell and new rewrite rules — a routing change for a twentieth of the remaining budget, which is not worth the risk here.
+
+### 5. Verification
+TypeScript, lint, **346/346** unit (5 new), **56** DB checks (30 migrations), **6** Edge checks, production build (33 pages, no demo products), **50** artifact checks (12 new, covering the preload hints), **Playwright 29/29**, axe **0 violations** — swept twice, once on the demo build and once on the production prerendered output.
+
+Across 390 / 430 / 820 / 1280 / 1440 × AR / HE / EN, over home, shop, product, journal, about and cart: no horizontal overflow anywhere, no clipped heading or button, the `h1` resolves to **Amiri 400 / Frank Ruhl Libre 300 / Newsreader 300** at every width with no synthesised weight, and **zero** Arabic-Indic digits on any page. The editorial loop was re-measured and behaves exactly as approved: present and playing at 1440 and 1280 non-touch with a box identical to the photograph's, absent with no media request at 820, 430, 390 and under reduced motion.
+
+**Not production-ready** — this pass fixed one defect; the launch list is unchanged.

@@ -2,6 +2,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {App} from './App';
+import {applyDocumentLocale,localeFromPath} from './document-locale';
 // THURAYA type system — each script has its own display and text face.
 // Display: Newsreader (Latin), Amiri (Arabic), Frank Ruhl Libre (Hebrew).
 // Text & utility: the IBM Plex Sans family, drawn for all three scripts.
@@ -21,4 +22,6 @@ import '@fontsource/ibm-plex-sans-hebrew/hebrew-400.css';
 import '@fontsource/ibm-plex-sans-hebrew/hebrew-500.css';
 import './styles/main.css';
 import './styles/storefront.css';
+// Direction and language are settled from the URL before anything is drawn.
+applyDocumentLocale(localeFromPath(window.location.pathname));
 createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><App/></BrowserRouter></React.StrictMode>);
