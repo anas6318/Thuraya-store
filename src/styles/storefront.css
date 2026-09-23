@@ -250,7 +250,7 @@ html[lang=ar] .storefront .standard-grid h3{line-height:1.6}
 /* The loop sits on the photograph, not in place of it: same box, same mask, faded in only once it is actually playing. */
 .editorial-image .editorial-loop{position:absolute;inset:0;z-index:0;opacity:0;pointer-events:none;transition:opacity .9s var(--ease)}
 .editorial-image .editorial-loop.is-playing{opacity:1}
-@media(max-width:1023px),(hover:none),(pointer:coarse),(prefers-reduced-motion:reduce){.editorial-image .editorial-loop{display:none}}
+@media(prefers-reduced-motion:reduce){.editorial-image .editorial-loop{display:none}}
 .editorial-image .horizon{inset-inline-end:-60vw;background:linear-gradient(90deg,rgba(200,214,250,.12),rgba(226,234,255,.8) 30%,rgba(200,214,250,.1) 80%,transparent)}
 [dir=rtl] .editorial-image .horizon{background:linear-gradient(270deg,rgba(200,214,250,.12),rgba(226,234,255,.8) 30%,rgba(200,214,250,.1) 80%,transparent)}
 .storefront .editorial-copy{position:relative;z-index:2;display:grid;grid-template-rows:var(--horizon) 1fr;padding:0 var(--gutter) 0 clamp(24px,4vw,64px);max-width:640px;align-items:stretch;justify-content:stretch}

@@ -29,14 +29,26 @@ test('the loop ships alongside its poster, in both codecs',()=>{
  for(const s of sources)assert.ok(existsSync(`public${s.src}`),`${s.src} missing`);
 });
 
+test('mobile Safari can start it inline: muted on the node before play, never fullscreen',()=>{
+ const source=readFileSync('src/components/EditorialLoop.tsx','utf8');
+ assert.match(source,/node\.muted=true;node\.defaultMuted=true;/,'iOS only autoplays an element that is already muted');
+ assert.ok(source.indexOf('node.muted=true')<source.indexOf('node.play()'),'muted must be set before play');
+ assert.match(source,/\.catch\(\(\)=>\{if\(live\)setLit\(false\)\}\)/,'a refused autoplay must leave the photograph showing');
+ assert.match(source,/node\.pause\(\)/,'playback stops when the band leaves the viewport');
+ const css=readFileSync('src/styles/storefront.css','utf8');
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.editorial-image \.editorial-loop\{display:none\}\}/);
+ assert.doesNotMatch(css,/@media\(max-width:1023px\)[^{]*\{\.editorial-image \.editorial-loop/,'no viewport restriction remains');
+ assert.match(css,/\.editorial-image\{position:relative;aspect-ratio:4\/5/,'the box reserves its aspect before anything loads');
+});
+
 test('the loop stays a second layer: still first, video muted, lazy and out of the accessibility tree',()=>{
  const source=readFileSync('src/components/EditorialLoop.tsx','utf8');
- for(const attribute of ['muted','loop','playsInline','preload="none"','aria-hidden="true"','tabIndex={-1}'])
+ for(const attribute of ['muted','loop','playsInline','preload="none"','aria-hidden="true"','tabIndex={-1}','disablePictureInPicture','disableRemotePlayback'])
   assert.match(source,new RegExp(attribute.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),`${attribute} missing`);
- assert.doesNotMatch(source,/controls/,'the loop must not expose controls');
- assert.doesNotMatch(source,/autoPlay/,'playback is gated in an effect, never by autoplay');
+ assert.doesNotMatch(source,/<video[^>]*\bcontrols\b/,'the loop must not expose controls');
+ assert.doesNotMatch(source,/<video[^>]*\bautoPlay\b/,'playback is gated in an effect, never by the autoplay attribute');
  assert.match(source,/prefers-reduced-motion:reduce/);
- assert.match(source,/min-width:1024px/);
+ assert.doesNotMatch(source,/min-width:|hover:hover|pointer:fine/,'the loop is no longer restricted to desktops');
  const markup=readFileSync('src/pages/Storefront.tsx','utf8');
  assert.ok(markup.indexOf('media={still}')<markup.indexOf('<EditorialLoop'),'the photograph renders before the loop');
 });

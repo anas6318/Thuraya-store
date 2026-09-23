@@ -794,3 +794,44 @@ TypeScript, lint, **346/346** unit (5 new), **56** DB checks (30 migrations), **
 Across 390 / 430 / 820 / 1280 / 1440 × AR / HE / EN, over home, shop, product, journal, about and cart: no horizontal overflow anywhere, no clipped heading or button, the `h1` resolves to **Amiri 400 / Frank Ruhl Libre 300 / Newsreader 300** at every width with no synthesised weight, and **zero** Arabic-Indic digits on any page. The editorial loop was re-measured and behaves exactly as approved: present and playing at 1440 and 1280 non-touch with a box identical to the photograph's, absent with no media request at 820, 430, 390 and under reduced motion.
 
 **Not production-ready** — this pass fixed one defect; the launch list is unchanged.
+
+---
+
+## 2026-09-23 — Editorial loop opened to phones and tablets
+
+Requirement change from the owner now that the clip has passed product-fidelity review: the same approved video plays on every screen. The section keeps its position between "The THURAYA approach" and "The Jewelry Journal"; nothing was moved, redesigned or re-encoded.
+
+### What changed
+Three things, and nothing else.
+
+1. **`src/components/EditorialLoop.tsx`** — the `(min-width:1024px) and (hover:hover) and (pointer:fine)` gate is gone. What remains is `prefers-reduced-motion: reduce`, which still returns `null`, so a visitor who asks for less motion gets **no video element at all** rather than a hidden one.
+2. **iOS.** The element is muted in the markup and set `muted`/`defaultMuted` on the node again immediately before `play()`, because mobile Safari starts an inline video only for an element that is already muted. It carries `playsinline`, and now `disablepictureinpicture` and `disableremoteplayback` as well, so nothing on the element can take it fullscreen or hand it to AirPlay. There is no `autoplay` attribute: playback is started by the observer and can therefore be refused without leaving the element in a broken state.
+3. **`src/styles/storefront.css`** — the CSS backstop that hid the loop below 1024px and on coarse pointers now hides it for reduced motion only.
+
+The observer margin went from 160px to 200px, which is the only tuning: on a phone the band arrives faster relative to the scroll, and the extra 40px buys the fetch a little more room without starting it early. Sources still attach only when the band is within that margin, playback still pauses when it leaves, and `preload="none"` still means nothing is fetched until then.
+
+One addition not in the brief, flagged here so it can be removed if unwanted: a visitor whose browser reports `navigator.connection.saveData` keeps the photograph. It only ever falls back to the approved still, which is the specified fallback behaviour.
+
+Unchanged: the video files, the approved still, the 4:5 box and its masks, the section's position and copy, the hero, product cards, backend, Admin, schema, and the one-light-event rule that lets the loop supersede the horizon sweep where it plays.
+
+### Verification
+TypeScript, lint, **347/347** unit (1 new), **56** DB checks, **6** Edge checks, production build (33 pages), **50** artifact checks, **Playwright 29/29**, axe **0 violations** — swept on the demo build and again on the production prerendered output.
+
+Live at 390 / 430 / 820 / 1440 in Arabic, Hebrew and English, phone and tablet widths run with touch emulation:
+
+| | result |
+|---|---|
+| video present and playing | every width, every locale (`paused: false`, clock advancing) |
+| muted / loop / controls / playsinline | `true` / `true` / **`false`** / present, everywhere |
+| fullscreen escape hatches | `disablepictureinpicture` and `disableremoteplayback` present |
+| focusable | no — `tabindex="-1"`, `aria-hidden="true"` |
+| video box vs photograph box | **identical** at every width and in both directions |
+| media requested before reaching the band | **zero**, every run |
+| paused after scrolling away | yes, every run |
+| reduced motion (390 AR, 390 EN, 1440 HE) | no video element, **zero** media requests, photograph shown |
+| CLS | ≤ 0.0108 including the scroll to the band; homepage matrix unchanged at 0.0000 |
+| horizontal overflow | 0px everywhere |
+
+Both failure paths were exercised directly rather than assumed. With `play()` forced to reject (`NotAllowedError`, which is what iOS low-power mode raises) and again with both media files aborted at the network layer: the video stays at `opacity: 0`, the photograph is drawn, the band's height is **unchanged** (488px on phone, 648px on desktop, before and after), and no page error is raised. No blank or broken state in either case.
+
+**Not production-ready** — the launch list is unchanged.
