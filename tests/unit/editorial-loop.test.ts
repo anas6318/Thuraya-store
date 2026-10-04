@@ -41,6 +41,14 @@ test('mobile Safari can start it inline: muted on the node before play, never fu
  assert.match(css,/\.editorial-image\{position:relative;aspect-ratio:4\/5/,'the box reserves its aspect before anything loads');
 });
 
+test('photograph and loop fill the same box, so the bracelet is never drawn twice',()=>{
+ const css=readFileSync('src/styles/storefront.css','utf8');
+ // WebKit grows an in-flow <picture> with height:100% past an aspect-ratio + max-height box (iPad landscape, desktop Safari).
+ assert.match(css,/\n\.editorial-image picture\{position:absolute;inset:0\}/,'the photograph must be laid out in the box, like the loop');
+ assert.doesNotMatch(css,/\.editorial-image picture\{display:block;height:100%\}/);
+ assert.match(css,/\.editorial-image \.editorial-loop\{position:absolute;inset:0;/);
+});
+
 test('the loop stays a second layer: still first, video muted, lazy and out of the accessibility tree',()=>{
  const source=readFileSync('src/components/EditorialLoop.tsx','utf8');
  for(const attribute of ['muted','loop','playsInline','preload="none"','aria-hidden="true"','tabIndex={-1}','disablePictureInPicture','disableRemotePlayback'])

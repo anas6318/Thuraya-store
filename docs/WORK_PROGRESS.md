@@ -835,3 +835,24 @@ Live at 390 / 430 / 820 / 1440 in Arabic, Hebrew and English, phone and tablet w
 Both failure paths were exercised directly rather than assumed. With `play()` forced to reject (`NotAllowedError`, which is what iOS low-power mode raises) and again with both media files aborted at the network layer: the video stays at `opacity: 0`, the photograph is drawn, the band's height is **unchanged** (488px on phone, 648px on desktop, before and after), and no page error is raised. No blank or broken state in either case.
 
 **Not production-ready** — the launch list is unchanged.
+
+---
+
+## 2026-10-04 — Editorial loop: duplicated bracelet on iPad (layering fix)
+
+### Defect
+On a real iPad the tennis-bracelet loop drew the bracelet twice during playback; desktop (Chrome) and phones were correct. It surfaced with `5d884ec`, the first commit that let iPads receive the video.
+
+### Diagnosis
+- **Not the media.** Both files were parsed header by header: H.264 High@4.0 (`avc1.640028`), 4:2:0, 8-bit, 1080×1350, 24 fps, 121 frames, 5.04 s, faststart, no alpha; VP9 profile 0, 4:2:0, 8-bit, 1080×1350, 121 frames, no alpha, no stereo mode, no hidden frames. One video element at every size.
+- **The two layers did not share a box in WebKit.** `.editorial-image` takes its height from `aspect-ratio:4/5` clamped by `max-height`. Chromium treats that height as definite; WebKit does not, so the photograph's `<picture>`/`<img>` with `height:100%` fell back to the image's own 4:5 and overflowed the box (1180×820: 631×789 in a 631×590 box), while the absolutely positioned loop filled the box exactly. Both are `object-fit:cover` with the same percentage masks, so the still's bracelet sat ~100–200 px lower than the loop's and showed through the fade and below it.
+- **Why iPad and not phone.** The clamp only binds in the two-column layout above 980 px: every iPad in landscape, and desktop Safari. Phones and portrait tablets get an exact 4:5 box, where both layers coincide.
+- Playwright WebKit 26.6 at iPad sizes reproduced the mismatched boxes. Windows WebKit decodes no video frames, so playback was simulated with frame 0 in the loop's slot: two bracelets on screen, mean pixel delta against the still 23.6–28.8/255, against 2.5–3.9 after the fix (Chromium: 3.3–3.6).
+
+### Fix
+One rule in `src/styles/storefront.css`: `.editorial-image picture` is now `position:absolute;inset:0`, laid out in the box exactly like the loop. Nothing changes in Chromium. The video, still, masks, source order, RTL mirroring and phone/tablet/desktop playback are unchanged.
+
+### Verification
+TypeScript, lint, **348/348** unit (1 new), production build (33 pages) and **50** artifact checks. Playwright: Chromium **33/33** (the original 29 plus 4 editorial cases) and a new WebKit spec, `tests/e2e/editorial-loop.spec.ts`, **16/16** across iPad portrait, iPad landscape, iPhone and desktop Safari in EN, AR and HE. Run against the old CSS, the same spec fails 8/16: iPad landscape and desktop Safari, the photograph overflowing the box.
+
+**Real-iPad verification still required**, in landscape especially. Windows WebKit cannot show what iPadOS Safari composites, and which source it picks (WebM or MP4) on a real iPad is still unknown.
