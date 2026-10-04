@@ -6,3 +6,7 @@ dist/
 test-results/
 playwright-report/
 *.log
+
+graphify-out/
+.claude/orchestrate-runs/
+.claude/worktrees/

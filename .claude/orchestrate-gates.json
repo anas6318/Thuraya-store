@@ -1,0 +1,78 @@
+{
+    "$schema":  "https://raw.githubusercontent.com/midego1/claude-orchestrate/main/schemas/gates-manifest.schema.json",
+    "$comment":  "THURAYA gates. DB and Edge checks are excluded from automatic gates until their credential/network behavior is explicitly reviewed.",
+    "install":  "npm.cmd ci --ignore-scripts --no-audit --no-fund",
+    "cachePaths":  [
+                       "dist",
+                       "*.tsbuildinfo",
+                       "test-results",
+                       "playwright-report"
+                   ],
+    "gates":  {
+                  "unit":  [
+                               {
+                                   "id":  "typecheck",
+                                   "cmd":  "npm.cmd run -s typecheck"
+                               },
+                               {
+                                   "id":  "lint",
+                                   "cmd":  "npm.cmd run -s lint"
+                               },
+                               {
+                                   "id":  "unit",
+                                   "cmd":  "npm.cmd test --silent"
+                               }
+                           ],
+                  "integration":  [
+                                      {
+                                          "id":  "typecheck",
+                                          "cmd":  "npm.cmd run -s typecheck"
+                                      },
+                                      {
+                                          "id":  "lint",
+                                          "cmd":  "npm.cmd run -s lint"
+                                      },
+                                      {
+                                          "id":  "unit",
+                                          "cmd":  "npm.cmd test --silent"
+                                      },
+                                      {
+                                          "id":  "build",
+                                          "cmd":  "npm.cmd run build"
+                                      }
+                                  ],
+                  "ship":  [
+                               {
+                                   "id":  "typecheck",
+                                   "cmd":  "npm.cmd run -s typecheck"
+                               },
+                               {
+                                   "id":  "lint",
+                                   "cmd":  "npm.cmd run -s lint"
+                               },
+                               {
+                                   "id":  "unit",
+                                   "cmd":  "npm.cmd test --silent"
+                               },
+                               {
+                                   "id":  "build",
+                                   "cmd":  "npm.cmd run build"
+                               },
+                               {
+                                   "id":  "e2e",
+                                   "cmd":  "npm.cmd run test:e2e"
+                               }
+                           ]
+              },
+    "pricing":  {
+                    "haiku":  {
+
+                              },
+                    "sonnet":  {
+
+                               },
+                    "opus":  {
+
+                             }
+                }
+}
