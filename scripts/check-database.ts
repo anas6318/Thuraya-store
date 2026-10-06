@@ -242,6 +242,116 @@ await db.query('select public.thuraya_save_product($1,$2)',[JSON.stringify(diamo
 const result=await db.query<{p:{gem:unknown;variants:{id:string;gem:unknown}[]}}>('select private.product_view(p) as p from public.products p where id=$1',[p.id]);assert.deepEqual(result.rows[0].p.gem,diamond.gem);assert.deepEqual(result.rows[0].p.variants.find(v=>v.id===diamond.variants[0].id)?.gem,diamond.variants[0].gem);
 }finally{await db.exec('rollback')}
 });
+// Order cancellation releases what checkout consumed (0031). Each check runs in a rolled-back transaction.
+const tracked=p.variants[0].id,untracked=p.variants[1].id;
+const place=async(key:string,lines:{variantId:string;quantity:number}[],discountCode='')=>(await db.query<{o:{id:string;total:number}}>('select public.thuraya_place_order($1,$2,$3,$4) as o',[JSON.stringify({...input,idempotencyKey:key,discountCode,lines:lines.map(l=>({productId:p.id,...l}))}),'eh','ph','release-'+key])).rows[0].o;
+const cancel=(id:string)=>db.query("select public.thuraya_change_order($1,'cancelled',$2)",[id,owner]);
+const stockOf=async(id:string)=>(await db.query<{stock:number|null}>('select stock from public.product_variants where id=$1',[id])).rows[0].stock;
+const usedOf=async(id:string)=>(await db.query<{used:number}>('select used from private.discounts where id=$1',[id])).rows[0].used;
+const releaseOf=async(id:string)=>(await db.query<{stock_units:number;discount_id:string|null;stock_ledger:boolean}>('select stock_units,discount_id,stock_ledger from private.order_releases where order_id=$1',[id])).rows;
+const releaseAudit=async(id:string)=>(await db.query<{summary:string}>("select summary from private.audit_log where action='order_resources_released' and target=$1",[id])).rows.map(r=>r.summary);
+const orderState=async(id:string)=>(await db.query<{status:string;payment_status:string}>('select status,payment_status from public.orders where id=$1',[id])).rows[0];
+const pay=(o:{id:string;total:number},event:string,outcome:string)=>db.query<{result:{ok?:boolean;held?:string;duplicate?:boolean}}>("select public.thuraya_payment_event('bank_transfer',$1,$2,$3,'ILS',$4) result",[event,o.id,o.total,outcome]);
+const lateAudit=async(id:string)=>(await db.query<{summary:string}>("select summary from private.audit_log where action='payment_after_cancellation' and target=$1",[id])).rows.map(r=>r.summary);
+const withStock=async(fn:()=>Promise<void>)=>{await db.exec('begin');try{await db.query('update public.product_variants set stock=5 where id=$1',[tracked]);await fn()}finally{await db.exec('rollback')}};
+const coupon=(id:string,code:string,used=0)=>db.query("insert into private.discounts(id,code,kind,value,active,usage_limit,used) values($1,$2,'fixed',100,true,2,$3)",[id,code,used]);
+await check('cancellation restores tracked stock exactly once',()=>withStock(async()=>{
+const o=await place('00000000-0000-4000-8000-000000000201',[{variantId:tracked,quantity:1},{variantId:tracked,quantity:1}]);
+assert.equal(await stockOf(tracked),3);
+const ledger=await db.query<{quantity:number}>('select quantity from private.order_stock_consumption where order_id=$1 and variant_id=$2',[o.id,tracked]);assert.equal(ledger.rows[0].quantity,2);
+await cancel(o.id);assert.equal(await stockOf(tracked),5);assert.equal((await orderState(o.id)).status,'cancelled');
+assert.deepEqual(await releaseOf(o.id),[{stock_units:2,discount_id:null,stock_ledger:true}]);
+assert.deepEqual(await releaseAudit(o.id),['stock restored: 2 units; coupon released: no']);
+}));
+await check('cancellation releases coupon usage exactly once',()=>withStock(async()=>{
+await coupon('release-coupon','RELEASE');await db.query("update private.discounts set usage_limit=1 where id='release-coupon'");
+const o=await place('00000000-0000-4000-8000-000000000202',[{variantId:tracked,quantity:1}],'release');assert.equal(await usedOf('release-coupon'),1);
+await cancel(o.id);assert.equal(await usedOf('release-coupon'),0);
+assert.deepEqual(await releaseOf(o.id),[{stock_units:1,discount_id:'release-coupon',stock_ledger:true}]);
+assert.deepEqual(await releaseAudit(o.id),['stock restored: 1 units; coupon released: yes']);
+// The released single-use coupon is redeemable again, exactly once.
+await place('00000000-0000-4000-8000-000000000203',[{variantId:tracked,quantity:1}],'release');assert.equal(await usedOf('release-coupon'),1);
+}));
+await check('cancellation without a coupon leaves every discount untouched and restores stock',()=>withStock(async()=>{
+await coupon('bystander','BYSTANDER',1);
+const discounts=async()=>(await db.query('select id,used from private.discounts order by id')).rows;const before=await discounts();
+const o=await place('00000000-0000-4000-8000-000000000204',[{variantId:tracked,quantity:2}]);await cancel(o.id);
+assert.deepEqual(await discounts(),before);assert.equal(await stockOf(tracked),5);
+}));
+await check('repeated cancellation raises invalid_transition and changes neither stock nor coupon usage',()=>withStock(async()=>{
+await coupon('repeat-coupon','REPEAT');
+const o=await place('00000000-0000-4000-8000-000000000205',[{variantId:tracked,quantity:2}],'repeat');await cancel(o.id);
+assert.equal(await stockOf(tracked),5);assert.equal(await usedOf('repeat-coupon'),0);
+await db.exec('savepoint repeat');await assert.rejects(cancel(o.id),/invalid_transition/);await db.exec('rollback to repeat');
+assert.equal(await stockOf(tracked),5);assert.equal(await usedOf('repeat-coupon'),0);assert.equal((await releaseAudit(o.id)).length,1);
+}));
+await check('a second release attempt for the same order cannot double-release',()=>withStock(async()=>{
+await coupon('double-coupon','DOUBLE',1);
+const o=await place('00000000-0000-4000-8000-000000000206',[{variantId:tracked,quantity:2}],'double');await cancel(o.id);
+assert.equal(await stockOf(tracked),5);assert.equal(await usedOf('double-coupon'),1);
+await db.exec('savepoint duplicate_release');await assert.rejects(db.query('insert into private.order_releases(order_id,stock_ledger) values($1,true)',[o.id]));await db.exec('rollback to duplicate_release');
+// Even if the state machine were bypassed and the order cancelled again, the release row blocks a second restoration.
+await db.query("update public.orders set status='payment_pending' where id=$1",[o.id]);await cancel(o.id);
+assert.equal(await stockOf(tracked),5);assert.equal(await usedOf('double-coupon'),1);assert.equal((await releaseOf(o.id)).length,1);assert.equal((await releaseAudit(o.id)).length,1);
+}));
+await check('untracked variants stay untracked and are never ledgered or restored',()=>withStock(async()=>{
+const o=await place('00000000-0000-4000-8000-000000000207',[{variantId:untracked,quantity:2},{variantId:tracked,quantity:1}]);
+const ledger=await db.query<{variant_id:string}>('select variant_id from private.order_stock_consumption where order_id=$1',[o.id]);assert.deepEqual(ledger.rows,[{variant_id:tracked}]);
+await cancel(o.id);assert.equal(await stockOf(untracked),null);assert.equal(await stockOf(tracked),5);assert.equal((await releaseOf(o.id))[0].stock_units,1);
+}));
+await check('a failure after release rolls back status, stock, coupon usage and the release together',()=>withStock(async()=>{
+await coupon('atomic-coupon','ATOMIC');
+const o=await place('00000000-0000-4000-8000-000000000208',[{variantId:tracked,quantity:2}],'atomic');
+// Notification enqueue runs after the release block; make it fail for this transaction only.
+await db.exec("create or replace function private.enqueue(p_order text,p_event text,p_status text,p_owner boolean default false) returns void language plpgsql set search_path='' as $$begin raise exception 'forced_enqueue_failure';end$$");
+await db.exec('savepoint atomic');await assert.rejects(cancel(o.id),/forced_enqueue_failure/);await db.exec('rollback to atomic');
+assert.equal((await orderState(o.id)).status,'payment_pending');assert.equal(await stockOf(tracked),3);assert.equal(await usedOf('atomic-coupon'),1);
+assert.equal((await releaseOf(o.id)).length,0);assert.equal((await releaseAudit(o.id)).length,0);
+}));
+await check('a payment after cancellation is preserved, held and audited without reviving the order',()=>withStock(async()=>{
+const o=await place('00000000-0000-4000-8000-000000000209',[{variantId:tracked,quantity:1}]);await cancel(o.id);
+assert.deepEqual((await pay(o,'cancel-late-paid','paid')).rows[0].result,{ok:true,held:'order_cancelled'});
+assert.deepEqual(await orderState(o.id),{status:'cancelled',payment_status:'pending'});
+const kept=await db.query("select outcome from private.payment_events where provider='bank_transfer' and event_id='cancel-late-paid' and order_id=$1",[o.id]);assert.deepEqual(kept.rows,[{outcome:'paid'}]);
+const summaries=await lateAudit(o.id);assert.equal(summaries.length,1);assert.equal(summaries[0],`paid ${(o.total/100).toFixed(2)} ILS event cancel-late-paid`);
+assert.equal(await stockOf(tracked),5);
+}));
+await check('a redelivered post-cancellation payment event is a duplicate and adds no audit row',()=>withStock(async()=>{
+const o=await place('00000000-0000-4000-8000-000000000210',[{variantId:tracked,quantity:1}]);await cancel(o.id);
+await pay(o,'cancel-late-again','paid');assert.equal((await pay(o,'cancel-late-again','paid')).rows[0].result.duplicate,true);
+assert.equal((await lateAudit(o.id)).length,1);
+assert.deepEqual((await pay(o,'cancel-late-refund','refunded')).rows[0].result,{ok:true,held:'order_cancelled'});assert.equal((await lateAudit(o.id)).length,2);
+assert.deepEqual((await pay(o,'cancel-late-failed','failed')).rows[0].result,{ok:true,held:'order_cancelled'});assert.equal((await lateAudit(o.id)).length,2);
+assert.deepEqual(await orderState(o.id),{status:'cancelled',payment_status:'pending'});
+}));
+await check('the paid flow on a non-cancelled order is unchanged',()=>withStock(async()=>{
+const o=await place('00000000-0000-4000-8000-000000000211',[{variantId:tracked,quantity:1}]);
+assert.deepEqual((await pay(o,'cancel-normal-paid','paid')).rows[0].result,{ok:true});
+assert.deepEqual(await orderState(o.id),{status:'payment_confirmed',payment_status:'paid'});
+assert.equal((await releaseOf(o.id)).length,0);assert.equal((await lateAudit(o.id)).length,0);assert.equal(await stockOf(tracked),4);
+}));
+await check('pre-ledger orders release the coupon but never guess stock; untracked post-ledger orders release silently',()=>withStock(async()=>{
+await coupon('legacy-coupon','LEGACY');
+const legacy=await place('00000000-0000-4000-8000-000000000212',[{variantId:tracked,quantity:2}],'legacy');
+await db.query('delete from private.order_stock_consumption where order_id=$1',[legacy.id]);
+await db.query("update public.orders set created_at=(select started_at from private.order_stock_ledger_epoch)-interval '1 day' where id=$1",[legacy.id]);
+await cancel(legacy.id);assert.equal(await stockOf(tracked),3);assert.equal(await usedOf('legacy-coupon'),0);
+assert.deepEqual(await releaseOf(legacy.id),[{stock_units:0,discount_id:'legacy-coupon',stock_ledger:false}]);
+assert.deepEqual(await releaseAudit(legacy.id),['stock not restored: order predates the stock ledger, verify inventory manually; coupon released: yes']);
+const madeToOrder=await place('00000000-0000-4000-8000-000000000213',[{variantId:untracked,quantity:1}]);await cancel(madeToOrder.id);
+assert.deepEqual(await releaseOf(madeToOrder.id),[{stock_units:0,discount_id:null,stock_ledger:true}]);
+const summary=await releaseAudit(madeToOrder.id);assert.deepEqual(summary,['stock restored: 0 units; coupon released: no']);assert.equal(summary[0].includes('verify'),false);
+}));
+await check('customers cannot read or write the release ledgers or execute the order functions',async()=>{
+for(const role of ['anon','authenticated']){
+for(const table of ['private.order_stock_consumption','private.order_releases','private.order_stock_ledger_epoch'])for(const privilege of ['select','insert','update','delete']){const r=await db.query<{ok:boolean}>('select has_table_privilege($1,$2,$3) ok',[role,table,privilege]);assert.equal(r.rows[0].ok,false,`${role} ${privilege} ${table}`)}
+for(const fn of ['public.thuraya_place_order(jsonb,text,text,text,uuid)','public.thuraya_change_order(text,text,text,boolean)','public.thuraya_payment_event(text,text,text,integer,text,text)']){assert.equal((await db.query<{ok:boolean}>("select has_function_privilege($1,$2,'execute') ok",[role,fn])).rows[0].ok,false,`${role} ${fn}`);assert.equal((await db.query<{ok:boolean}>("select has_function_privilege('service_role',$1,'execute') ok",[fn])).rows[0].ok,true,fn)}
+await db.exec(`set role ${role}`);try{
+await assert.rejects(db.query('select * from private.order_stock_consumption'));await assert.rejects(db.query('select * from private.order_releases'));
+await assert.rejects(db.query("insert into private.order_releases(order_id,stock_ledger) values($1,true)",[order.id]));await assert.rejects(db.query('update private.order_stock_consumption set quantity=1'));
+await assert.rejects(db.query("select public.thuraya_change_order($1,'cancelled',$2)",[order.id,owner]));
+}finally{await db.exec('reset role')}}
+});
 console.log(`${count} database integration checks passed (local Postgres/WASM; Supabase Auth/Storage mocked).`);
 }
 await db.close();
