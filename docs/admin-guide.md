@@ -12,6 +12,10 @@ The first gallery image is the cover. Use the reorder controls and localized alt
 
 Orders expose the allowed next states. Verify real bank receipt before payment confirmation. Every status change records a timeline event and outbox records. Supplier references and notes are internal, never customer tracking data.
 
+Cancelling an order returns the tracked stock and the promotion use it consumed, exactly once, in the same transaction as the status change; the audit log records it as `order_resources_released`.
+An audit entry saying "verify inventory manually" (orders placed before the stock ledger, or variants whose tracking was switched off since checkout) means stock was not restored: check and correct it by hand.
+A `payment_after_cancellation` audit entry means a payment or refund arrived after the order was cancelled: the order stays cancelled and nothing is refunded automatically; reconcile it with the customer and payment provider manually.
+
 Homepage sections can be enabled, reordered and edited with constrained content fields. Move-up reordering saves the complete order atomically and rejects stale section lists. Curated collection and product selections may be combined. Full/grid alternatives apply to supported hero/editorial/product-grid layouts; default split compositions remain unchanged. Policies remain drafts until legal-reviewed and complete in all languages. Reviews require manual approval, including their photos. Media alt-text changes use an explicit save button.
 
 Taxonomies use the same complete-list atomic ordering model: create records append at the end, then use Move up to save the whole order. Active categories and collections require AR/HE/EN names. The Media Library shows queued cleanup jobs and allows owner/admin/content-manager staff to safely requeue only jobs marked `needs_attention`; this does not delete an object synchronously.
