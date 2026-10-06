@@ -5,7 +5,7 @@ Do not deploy as a live shop until launch-checklist is complete.
 1. Create a separate THURAYA Git repository and commit source, migrations, tests, lockfile and `.env.example`; exclude credentials and local fixture configuration.
 2. Complete staging Supabase setup, secure owner enrollment and provider tests.
 3. Import the THURAYA repository into Vercel. Build command: `npm run build`; output: `dist`.
-4. Set public Supabase URL/anon key and the canonical HTTPS `VITE_SITE_URL`. Do not set demo mode for production. Set server secrets only in Supabase.
+4. Set public Supabase URL/anon key and the canonical HTTPS `VITE_SITE_URL`. Do not set demo mode for production. Production builds (`VERCEL_ENV=production`) now fail unless `VITE_SITE_URL` is the canonical https origin (no path, not localhost or an IP address); Preview and local builds fall back to `http://localhost:4173`. The Supabase secret `SITE_URL` must be the same origin. Set server secrets only in Supabase.
 5. Build fails if a configured catalog cannot be read. Inspect the generated three-language HTML, sitemap, canonical links and structured data. Rebuild after content publication.
 6. Verify direct refresh of product, account and order routes on the actual host. Review `vercel.json` headers against the exact enabled integrations.
 7. Point the owner's domain after preview approval; configure TLS, Auth redirects, allowed origins, notification links and monitoring.
