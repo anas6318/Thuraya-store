@@ -856,3 +856,10 @@ One rule in `src/styles/storefront.css`: `.editorial-image picture` is now `posi
 TypeScript, lint, **348/348** unit (1 new), production build (33 pages) and **50** artifact checks. Playwright: Chromium **33/33** (the original 29 plus 4 editorial cases) and a new WebKit spec, `tests/e2e/editorial-loop.spec.ts`, **16/16** across iPad portrait, iPad landscape, iPhone and desktop Safari in EN, AR and HE. Run against the old CSS, the same spec fails 8/16: iPad landscape and desktop Safari, the photograph overflowing the box.
 
 **Real-iPad verification still required**, in landscape especially. Windows WebKit cannot show what iPadOS Safari composites, and which source it picks (WebM or MP4) on a real iPad is still unknown.
+
+## 2026-10-06 - Production builds fail on a missing or local `VITE_SITE_URL`
+
+- **Defect.** `scripts/prerender.tsx` fell back to `http://localhost:4173` silently, so a production build without `VITE_SITE_URL` exited 0 and wrote localhost into 35 files (canonical, hreflang, og:url, JSON-LD, sitemap, robots).
+- **Contract.** `shared/site-url.ts` (`resolveSiteOrigin`) is used by prerender and `verify-build`. With `VERCEL_ENV=production` the value must be an https origin (no path, credentials, localhost, IP literal or `.local/.internal/.test/.invalid/.example` host) or the build fails. Local, test, demo and Preview keep the localhost fallback. Supabase `SITE_URL` is separate server config and must match.
+- **Verification.** 355 unit (7 new, incl. prerender subprocess), typecheck, lint; production build fails for unset, `localhost` and `127.0.0.1`; a valid https value builds and `verify-build` now also checks every SEO URL origin and rejects localhost in production output.
+- **Caveats.** `*.vercel.app` and `example.com` are deliberately allowed. `npm run build:preview-demo` still has a pre-existing Windows `spawnSync('npm')` defect, untouched.
